@@ -1,3 +1,6 @@
 #cache
 python_example_dashboard/__pycache__
 example/__pycache__
+
+#environment variable
+.env
