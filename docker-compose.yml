@@ -17,6 +17,5 @@ services:
     image: ermadock/yayawallet-sdk-frontend:latest
     ports:
       - "5173:5173"
-    command: npm run dev
     environment:
       - VITE_BASE_URL=http://localhost:8000
