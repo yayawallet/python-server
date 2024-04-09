@@ -7,8 +7,5 @@ services:
       - "8000:8000"
     volumes:
       - ./:/app
-    environment:
-      - YAYA_API_URL=${{ secrets.YAYA_API_URL }}
-      - YAYA_API_PATH=${{ secrets.YAYA_API_PATH }}
-      - YAYA_API_KEY=${{ secrets.YAYA_API_KEY }}
-      - YAYA_API_SECRET=${{ secrets.YAYA_API_SECRET }}
+    env_file:
+      - .env
