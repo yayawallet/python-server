@@ -8,14 +8,7 @@ services:
     volumes:
       - ./:/app
     environment:
-      - YAYA_API_URL=https://yayawallet.com/api/en
-      - YAYA_API_PATH=/api/en
-      - YAYA_API_KEY=key-test_19aca8ac-7925-4438-9ece-e54b6fc31d61
-      - YAYA_API_SECRET=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhcGlfa2V5Ijoia2V5LXRlc3RfMTlhY2E4YWMtNzkyNS00NDM4LTllY2UtZTU0YjZmYzMxZDYxIiwic2VjcmV0IjoiM2QwMWU3ZTcxNDVkYTRhY2RlMmM2MzA3NzRhMjFjODU0ZmFkNzIwZCJ9.-Zy7J39-3VIlmtr-6ROpF2nN1b0C5Dzh7iOc2rdzXbQ
-
-  frontend:
-    image: ermadock/yayawallet-sdk-frontend:latest
-    ports:
-      - "5173:5173"
-    environment:
-      - VITE_BASE_URL=http://localhost:8000
+      - YAYA_API_URL=${{ secrets.YAYA_API_URL }}
+      - YAYA_API_PATH=${{ secrets.YAYA_API_PATH }}
+      - YAYA_API_KEY=${{ secrets.YAYA_API_KEY }}
+      - YAYA_API_SECRET=${{ secrets.YAYA_API_SECRET }}
