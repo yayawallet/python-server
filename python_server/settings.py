@@ -24,7 +24,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'corsheaders',
-    'example.apps.ExampleConfig',
+    'dashboard.apps.DashboardConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -43,7 +43,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'python_example_dashboard.urls'
+ROOT_URLCONF = 'python_server.urls'
 
 TEMPLATES = [
     {
@@ -65,7 +65,7 @@ STATIC_URL = "static/"
 
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
-WSGI_APPLICATION = 'python_example_dashboard.wsgi.application'
+WSGI_APPLICATION = 'python_server.wsgi.application'
 
 
 # Static files (CSS, JavaScript, Images)
