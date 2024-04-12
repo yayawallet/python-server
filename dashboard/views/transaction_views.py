@@ -4,7 +4,7 @@ from yayawallet_python_sdk.api import transaction
 
 @api_view(['GET'])
 async def proxy_get_transaction_list_by_user(request):
-    response = await transaction.get_transaction_list_by_user()
+    response = await transaction.get_transaction_list_by_user(None)
     return Response(response)
 
 @api_view(['POST'])
