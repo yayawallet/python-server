@@ -2,7 +2,7 @@ from django.urls import path
 from ..views import recurring_contract_views
 
 urlpatterns = [
-    path('recurring-contract', recurring_contract_views.proxy_list_all_contracts, name='list-of-all-contracts'),
+    path('recurring-contract/list', recurring_contract_views.proxy_list_all_contracts, name='list-of-all-contracts'),
     path('recurring-contract/create', recurring_contract_views.proxy_create_contract, name='create-contract'),    
     path('recurring-contract/request-payment', recurring_contract_views.proxy_request_payment, name='request-payment'),
     path('recurring-contract/subscriptions', recurring_contract_views.proxy_get_subscriptions, name='get-subscriptions'),
