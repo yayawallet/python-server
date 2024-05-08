@@ -11,4 +11,5 @@ urlpatterns = [
     path('', include('dashboard.urls.transaction_urls')),
     path('', include('dashboard.urls.transfer_urls')),
     path('', include('dashboard.urls.user_urls')),
+    path('', include('dashboard.urls.scheduled_urls')),
 ]
