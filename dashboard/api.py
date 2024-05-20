@@ -1,5 +1,5 @@
 from django.shortcuts import get_object_or_404
-from ninja_extra import NinjaExtraAPI, api_controller, route, permissions, throttle
+from ninja_extra import NinjaExtraAPI, api_controller, route, throttle
 from yayawallet_python_sdk.api.user import get_organization
 
 app = NinjaExtraAPI()
