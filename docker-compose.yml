@@ -9,3 +9,19 @@ services:
       - ./:/app
     env_file:
       - .env
+      
+  rabbitmq_server:
+    image: rabbitmq:3-management
+    ports:
+      - 5672:5672
+      - 15672:15672
+
+  worker:
+    build:
+      context: .
+      dockerfile: worker.Dockerfile
+    network_mode: host
+    environment:
+      rabbitmq_uri: amqp://127.0.0.1:5672
+    depends_on: 
+      - rabbitmq_server
