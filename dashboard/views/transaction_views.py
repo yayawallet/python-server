@@ -1,11 +1,12 @@
 from adrf.decorators import api_view
 from rest_framework.response import Response
 from yayawallet_python_sdk.api import transaction
+from .stream_response import stream_response
 
 @api_view(['GET'])
 async def proxy_get_transaction_list_by_user(request):
     response = await transaction.get_transaction_list_by_user(None)
-    return Response(response)
+    return stream_response(response)
 
 @api_view(['POST'])
 async def proxy_create_transaction(request):
@@ -16,7 +17,7 @@ async def proxy_create_transaction(request):
         data.get('cause'),
         data.get('meta_data')
         )
-    return Response(response)
+    return stream_response(response)
 
 @api_view(['POST'])
 async def proxy_transaction_fee(request):
@@ -25,7 +26,7 @@ async def proxy_transaction_fee(request):
         data.get('receiver'), 
         data.get('amount')
         )
-    return Response(response)
+    return stream_response(response)
 
 @api_view(['POST'])
 async def proxy_generate_qr_url(request):
@@ -34,12 +35,12 @@ async def proxy_generate_qr_url(request):
         data.get('amount'), 
         data.get('cause')
         )
-    return Response(response)
+    return stream_response(response)
 
 @api_view(['GET'])
 async def proxy_get_transaction_by_id(request, id):
     response = await transaction.get_transaction_by_id(id)
-    return Response(response)
+    return stream_response(response)
 
 @api_view(['POST'])
 async def proxy_search_transaction(request):
@@ -47,4 +48,4 @@ async def proxy_search_transaction(request):
     response = await transaction.search_transaction(
         data.get('query')
         )
-    return Response(response)
+    return stream_response(response)

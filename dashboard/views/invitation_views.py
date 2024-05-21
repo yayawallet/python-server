@@ -1,11 +1,12 @@
 from adrf.decorators import api_view
 from rest_framework.response import Response
 from yayawallet_python_sdk.api import invitation
+from .stream_response import stream_response
 
 @api_view(['GET'])
 async def proxy_find_by_inviter(request):
     response = await invitation.find_by_inviter()
-    return Response(response)
+    return stream_response(response)
 
 @api_view(['POST'])
 async def proxy_create_inivitation(request):
@@ -15,4 +16,4 @@ async def proxy_create_inivitation(request):
         data.get('phone'),
         data.get('amount')
         )
-    return Response(response)
+    return stream_response(response)
