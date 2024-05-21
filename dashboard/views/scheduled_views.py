@@ -1,6 +1,7 @@
 from adrf.decorators import api_view
 from rest_framework.response import Response
 from yayawallet_python_sdk.api import scheduled
+from .stream_response import stream_response
 
 @api_view(['POST'])
 async def proxy_create_schedule(request):
@@ -13,14 +14,14 @@ async def proxy_create_schedule(request):
         data.get('start_at'), 
         data.get('meta_data')
         )
-    return Response(response)
+    return stream_response(response)
 
 @api_view(['GET'])
 async def proxy_schedule_list(request):
     response = await scheduled.get_list()
-    return Response(response)
+    return stream_response(response)
 
 @api_view(['GET'])
 async def proxy_archive_schedule(request):
     response = await scheduled.archive()
-    return Response(response)
+    return stream_response(response)
