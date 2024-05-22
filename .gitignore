@@ -7,3 +7,6 @@ dashboard/views/__pycache__
 
 #environment variable
 .env
+
+#virtual environment
+venv
