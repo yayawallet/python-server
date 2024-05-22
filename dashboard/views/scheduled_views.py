@@ -22,6 +22,6 @@ async def proxy_schedule_list(request):
     return stream_response(response)
 
 @api_view(['GET'])
-async def proxy_archive_schedule(request):
-    response = await scheduled.archive()
+async def proxy_archive_schedule(request, id):
+    response = await scheduled.archive(id)
     return stream_response(response)
