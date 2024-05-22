@@ -76,3 +76,12 @@ STATIC_URL = 'static/'
 ALLOWED_HOSTS=['*']
 
 CORS_ORIGIN_ALLOW_ALL = True
+
+DATABASES = {
+  'default': {
+    'ENGINE': 'django.db.backends.postgresql',
+    'NAME': os.environ.get('YAYA_DB_NAME'),
+    'USER': os.environ.get('YAYA_DB_USERNAME'),
+    'PASSWORD': os.environ.get('YAYA_DB_PASSWORD')
+  }
+}
