@@ -7,10 +7,8 @@ services:
       - 5462:5432
     volumes:
       - ./data/db:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_DB=${YAYA_DB_NAME}
-      - POSTGRES_USER=${YAYA_DB_USERNAME}
-      - POSTGRES_PASSWORD=${YAYA_DB_PASSWORD}
+    env_file:
+      - .env
 
   rabbitmq_server:
     image: rabbitmq:3-management
