@@ -6,7 +6,7 @@ from celery import Celery
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'python_server.settings')
 
-app = Celery('python_server')
+app = Celery('python_server', broker='amqp://guest:guest@rabbitmq_server:5672//')
 
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()

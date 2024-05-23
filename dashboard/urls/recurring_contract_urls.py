@@ -11,4 +11,6 @@ urlpatterns = [
     path('recurring-contract/reject-payment/<str:id>', recurring_contract_views.proxy_reject_payment_request, name='reject-payment-request'),
     path('recurring-contract/activate/<str:id>', recurring_contract_views.proxy_activate_subscription, name='activate-subscription'),
     path('recurring-contract/deactivate/<str:id>', recurring_contract_views.proxy_deactivate_subscription, name='deactivate-subscription'),
+    path('recurring-contract/bulk-import-contract', recurring_contract_views.bulk_contract_import, name='bulk-import-contract'),
+    path('recurring-contract/bulk-import-recurring-payment-request', recurring_contract_views.bulk_recurring_payment_request_import, name='bulk-import-recurring-payment-request'),
 ]

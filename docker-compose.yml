@@ -1,15 +1,17 @@
 version: '0.1'
 
 services:
-  backend:
-    build: ./
+  db:
+    image: postgres
     ports:
-      - "8000:8000"
+      - 5462:5432
     volumes:
-      - ./:/app
-    env_file:
-      - .env
-      
+      - ./data/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${YAYA_DB_NAME}
+      - POSTGRES_USER=${YAYA_DB_USERNAME}
+      - POSTGRES_PASSWORD=${YAYA_DB_PASSWORD}
+
   rabbitmq_server:
     image: rabbitmq:3-management
     ports:
@@ -20,8 +22,17 @@ services:
     build:
       context: .
       dockerfile: worker.Dockerfile
-    network_mode: host
-    environment:
-      rabbitmq_uri: amqp://127.0.0.1:5672
     depends_on: 
       - rabbitmq_server
+
+  backend:
+    build: ./
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - worker

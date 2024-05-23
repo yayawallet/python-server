@@ -41,7 +41,6 @@ async def bulk_schedule_import(request):
     json_data = uploaded_file.read().decode('utf-8')
     data = json.loads(json_data)
     for row in data:
-        print(row)
         instance = Scheduled(account_number=row.get('account_number'), amount=row.get('amount'), reason=row.get('reason'), recurring=row.get('recurring'), start_at=row.get('start_at'), meta_data=json.dumps(row.get('meta_data')), json_object=json.dumps(row), uploaded=False)
         instances.append(instance)
     await sync_to_async(Scheduled.objects.bulk_create)(instances)

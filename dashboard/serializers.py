@@ -1,7 +1,17 @@
 from rest_framework import serializers
-from .models import Scheduled
+from .models import Scheduled, Contract, RecurringPaymentRequest
 
 class ScheduledSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Scheduled  # Set the model if applicable
-        fields = '__all__'  # Include all fields by default (adjust as needed)
+        model = Scheduled 
+        fields = '__all__'
+
+class ContractSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Contract 
+        fields = '__all__'
+
+class RecurringPaymentRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RecurringPaymentRequest 
+        fields = '__all__'

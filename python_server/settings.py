@@ -19,6 +19,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+BROKER_POOL_LIMIT = None
+
 
 # Application definition
 
@@ -29,7 +31,6 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',
     'rest_framework',
     'ninja_extra',
 ]
@@ -82,6 +83,8 @@ DATABASES = {
     'ENGINE': 'django.db.backends.postgresql',
     'NAME': os.environ.get('YAYA_DB_NAME'),
     'USER': os.environ.get('YAYA_DB_USERNAME'),
-    'PASSWORD': os.environ.get('YAYA_DB_PASSWORD')
+    'PASSWORD': os.environ.get('YAYA_DB_PASSWORD'),
+    'HOST': 'db',
+    'PORT': 5432
   }
 }
