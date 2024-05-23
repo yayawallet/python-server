@@ -81,9 +81,9 @@ CORS_ORIGIN_ALLOW_ALL = True
 DATABASES = {
   'default': {
     'ENGINE': 'django.db.backends.postgresql',
-    'NAME': os.environ.get('YAYA_DB_NAME'),
-    'USER': os.environ.get('YAYA_DB_USERNAME'),
-    'PASSWORD': os.environ.get('YAYA_DB_PASSWORD'),
+    'NAME': os.environ.get('POSTGRES_DB'),
+    'USER': os.environ.get('POSTGRES_USER'),
+    'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
     'HOST': 'db',
     'PORT': 5432
   }
