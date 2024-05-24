@@ -24,11 +24,16 @@ services:
       - rabbitmq_server
 
   backend:
-    build: ./
+    image: yayawallet/python-server:latest
+    entrypoint: ["/bin/sh","-c"]
+    command:
+      - |
+        sleep 20
+        python manage.py makemigrations
+        python manage.py migrate
+        python manage.py runserver 0.0.0.0:8000
     ports:
       - "8000:8000"
-    volumes:
-      - ./:/app
     env_file:
       - .env
     depends_on:
