@@ -8,6 +8,8 @@ from django.http import HttpResponseBadRequest
 from ..models import Scheduled
 import json
 from dashboard.tasks import import_scheduled_rows
+from io import TextIOWrapper
+import csv
 
 @api_view(['POST'])
 async def proxy_create_schedule(request):
@@ -35,14 +37,15 @@ async def proxy_archive_schedule(request, id):
 @api_view(['POST'])
 async def bulk_schedule_import(request):
     uploaded_file = request.FILES['file']
-    if not uploaded_file.name.endswith('.json'):
-        return HttpResponseBadRequest("The uploaded file is not a JSON file.")
+    if not uploaded_file or (not uploaded_file.name.endswith('.csv') and not uploaded_file.name.endswith('.xlsx')):
+        return HttpResponseBadRequest("The uploaded file is not a CSV or XLSX file.")
+
     instances = []
-    json_data = uploaded_file.read().decode('utf-8')
-    data = json.loads(json_data)
-    for row in data:
-        instance = Scheduled(account_number=row.get('account_number'), amount=row.get('amount'), reason=row.get('reason'), recurring=row.get('recurring'), start_at=row.get('start_at'), meta_data=json.dumps(row.get('meta_data')), json_object=json.dumps(row), uploaded=False)
-        instances.append(instance)
+    with TextIOWrapper(uploaded_file, encoding='utf-8') as csvfile:
+        reader = csv.reader(csvfile)
+        for row in reader:
+            instance = Scheduled(account_number=row[0], amount=row[1], reason=row[2], recurring=row[3], start_at=row[4], meta_data=json.dumps(row[5]), json_object=json.dumps(row), uploaded=False)
+            instances.append(instance)
     await sync_to_async(Scheduled.objects.bulk_create)(instances)
     import_scheduled_rows.delay()
 
