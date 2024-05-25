@@ -6,12 +6,15 @@ from .stream_response import stream_response
 @api_view(['POST'])
 async def proxy_buy_airtime(request):
     data = request.data
-    if data.get('amount'):
-        response = await airtime.buy_airtime(
-            data.get('phone'), 
-            data.get('amount')
-            )
-        return stream_response(response)
+    response = await airtime.buy_airtime(
+        data.get('phone'), 
+        data.get('amount')
+        )
+    return stream_response(response)
+
+@api_view(['POST'])
+async def proxy_buy_package(request):
+    data = request.data
     response = await airtime.buy_package(
         data.get('phone'), 
         data.get('package')
