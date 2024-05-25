@@ -77,7 +77,7 @@ async def bulk_contract_import(request):
     json_data = uploaded_file.read().decode('utf-8')
     data = json.loads(json_data)
     for row in data:
-        instance = Contract(contract_number=row.get('contract_number'), service_type=row.get('service_type'), customer_account_name=row.get('customer_account_name'), meta_data=row.get('meta_data'), json_object=row.get('json_object'), uploaded=False)
+        instance = Contract(contract_number=row.get('contract_number'), service_type=row.get('service_type'), customer_account_name=row.get('customer_account_name'), meta_data=json.dumps(row.get('meta_data')), json_object=json.dumps(row), uploaded=False)
         instances.append(instance)
     await sync_to_async(Contract.objects.bulk_create)(instances)
     import_contract_rows.delay()
