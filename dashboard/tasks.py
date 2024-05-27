@@ -3,13 +3,14 @@ from __future__ import absolute_import, unicode_literals
 import celery
 from yayawallet_python_sdk.api import airtime
 from asgiref.sync import sync_to_async
-from .models import Scheduled, Contract, RecurringPaymentRequest
+from .models import Scheduled, Contract, FailedContract, RecurringPaymentRequest
 from yayawallet_python_sdk.api import scheduled, recurring_contract
 from python_server.celery import app
 from .async_task import async_task
-from .serializers import ScheduledSerializer, ContractSerializer, RecurringPaymentRequestSerializer
+from .serializers import ScheduledSerializer, ContractSerializer, FailedContractSerializer, RecurringPaymentRequestSerializer
 import json
 from django.shortcuts import get_object_or_404
+from django.http import HttpResponseBadRequest
 
 @async_task(app, bind=True)
 async def import_scheduled_rows(self: celery.Task):
@@ -44,7 +45,18 @@ def get_scheduled_serialized_data(db_results):
     return serializer.data
 
 @async_task(app, bind=True)
-async def import_contract_rows(self: celery.Task):
+async def import_contract_rows(self: celery.Task, data):
+    for row in data:
+        try:
+            instance = Contract(contract_number=row.get('contract_number'), service_type=row.get('service_type'), customer_account_name=row.get('customer_account_name'), meta_data=json.dumps(row.get('meta_data')), json_object=json.dumps(row), uploaded=False)
+            await sync_to_async(instance.save)()
+        except:
+            print("An exception occurred, while importing contract!!")
+            try:
+                instance = FailedContract(json_object=json.dumps(row))    
+                await sync_to_async(instance.save)()
+            except:
+                print("An exception occurred, while importing failed contract!!")
     obj = await sync_to_async(Contract.objects.filter)(uploaded=False)
     dep= await sync_to_async(get_contract_serialized_data)(obj)
     count = 0
@@ -74,7 +86,17 @@ def get_contract_serialized_data(db_results):
     return serializer.data
 
 @async_task(app, bind=True)
-async def import_recurring_payment_request_rows(self: celery.Task):
+async def import_recurring_payment_request_rows(self: celery.Task, request):
+    uploaded_file = request.FILES['file']
+    if not uploaded_file.name.endswith('.json'):
+        return HttpResponseBadRequest("The uploaded file is not a JSON file.")
+    instances = []
+    json_data = uploaded_file.read().decode('utf-8')
+    data = json.loads(json_data)
+    for row in data:
+        instance = RecurringPaymentRequest(contract_number=row.get('contract_number'), amount=row.get('amount'), currency=row.get('currency'), cause=row.get('cause'), notification_url=row.get('notification_url'), meta_data=json.dumps(row.get('meta_data')), json_object=json.dumps(row), uploaded=False)
+        instances.append(instance)
+    await sync_to_async(RecurringPaymentRequest.objects.bulk_create)(instances)
     obj = await sync_to_async(RecurringPaymentRequest.objects.filter)(uploaded=False)
     dep= await sync_to_async(get_recurring_payment_request_serialized_data)(obj)
     count = 0

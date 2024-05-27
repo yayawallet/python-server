@@ -24,7 +24,7 @@ services:
       - rabbitmq_server
 
   backend:
-    image: yayawallet/python-server:latest
+    build: .
     entrypoint: ["/bin/sh","-c"]
     command:
       - |

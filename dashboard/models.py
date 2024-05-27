@@ -27,6 +27,15 @@ class Contract(models.Model):
     json_object = models.CharField()
     uploaded = models.BooleanField()
 
+    class Meta:
+        unique_together = ('contract_number', 'customer_account_name',)
+
+class FailedContract(models.Model):
+    uuid = models.UUIDField( 
+         primary_key = True, 
+         default = uuid.uuid4, 
+         editable = False) 
+    json_object = models.CharField()
 
 class RecurringPaymentRequest(models.Model):
     uuid = models.UUIDField( 
