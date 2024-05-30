@@ -7,7 +7,7 @@ from .models import Scheduled, Contract, FailedContract, RecurringPaymentRequest
 from yayawallet_python_sdk.api import scheduled, recurring_contract
 from python_server.celery import app
 from .async_task import async_task
-from .serializers import ScheduledSerializer, ContractSerializer, FailedContractSerializer, RecurringPaymentRequestSerializer
+from .serializers.serializers import ScheduledSerializer, ContractSerializer, FailedContractSerializer, RecurringPaymentRequestSerializer
 import json
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponseBadRequest

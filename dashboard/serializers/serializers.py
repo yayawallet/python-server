@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Scheduled, Contract, FailedContract, RecurringPaymentRequest
+from ..models import Scheduled, Contract, FailedContract, RecurringPaymentRequest
 
 class ScheduledSerializer(serializers.ModelSerializer):
     class Meta:

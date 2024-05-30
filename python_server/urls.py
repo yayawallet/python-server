@@ -1,5 +1,5 @@
 from django.urls import include, path
-from dashboard.api import app
+from django.contrib import admin
 
 urlpatterns = [
     path('', include('dashboard.urls.airtime_urls')),
@@ -12,4 +12,6 @@ urlpatterns = [
     path('', include('dashboard.urls.transfer_urls')),
     path('', include('dashboard.urls.user_urls')),
     path('', include('dashboard.urls.scheduled_urls')),
+    path('', include('dashboard.urls.auth_urls')),
+    path('admin', admin.site.urls),
 ]
