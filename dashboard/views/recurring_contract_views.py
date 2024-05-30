@@ -5,7 +5,7 @@ from django.http.response import JsonResponse
 from asgiref.sync import sync_to_async
 from .stream_response import stream_response
 from ..models import FailedContract
-from ..serializers import FailedContractSerializer
+from ..serializers.serializers import FailedContractSerializer
 from django.http import HttpResponseBadRequest
 import json
 from dashboard.tasks import import_contract_rows, import_recurring_payment_request_rows

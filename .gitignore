@@ -4,6 +4,7 @@ dashboard/__pycache__
 dashboard/urls/__pycache__
 dashboard/migrations/__pycache__
 dashboard/views/__pycache__
+dashboard/serializers/__pycache__
 
 #environment variable
 .env
