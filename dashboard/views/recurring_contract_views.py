@@ -7,7 +7,7 @@ from .stream_response import stream_response
 from ..models import FailedContract
 from ..serializers.serializers import FailedContractSerializer
 from django.http import HttpResponseBadRequest
-import json
+import pandas as pd
 from dashboard.tasks import import_contract_rows, import_recurring_payment_request_rows
 from python_server.celery import app
 
@@ -72,12 +72,29 @@ async def proxy_deactivate_subscription(request, id):
 
 @api_view(['POST'])
 async def bulk_contract_import(request):
-    uploaded_file = request.FILES['file']
-    if not uploaded_file.name.endswith('.json'):
-        return HttpResponseBadRequest("The uploaded file is not a JSON file.")
+    uploaded_file = request.FILES.get('file')
+    if not uploaded_file:
+        return HttpResponseBadRequest("No file uploaded.")
     
-    json_data = uploaded_file.read().decode('utf-8')
-    data = json.loads(json_data)
+    file_name = uploaded_file.name
+
+    if file_name.endswith('.csv'):
+        try:
+            df = pd.read_csv(uploaded_file)
+        except Exception as e:
+            return HttpResponseBadRequest(f"Error reading CSV file: {e}")
+    elif file_name.endswith(('.xls', '.xlsx')):
+        try:
+            df = pd.read_excel(uploaded_file)
+        except Exception as e:
+            return HttpResponseBadRequest(f"Error reading Excel file: {e}")
+    else:
+        return HttpResponseBadRequest("The uploaded file is not a CSV or Excel file.")
+
+    try:
+        data = df.to_dict(orient='records')
+    except Exception as e:
+        return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
     import_contract_rows.delay(data)
 
     return JsonResponse({"message": "Contract Requests Import in Progress!!"}, safe=False)
