@@ -31,6 +31,9 @@ services:
         sleep 20
         python manage.py makemigrations
         python manage.py migrate
+        if [ "$DJANGO_SUPERUSER_USERNAME" ] && [ "$DJANGO_SUPERUSER_EMAIL" ] && [ "$DJANGO_SUPERUSER_PASSWORD" ]; then
+          python manage.py createsuperuser --noinput || true
+        fi
         python manage.py runserver 0.0.0.0:8000
     ports:
       - "8000:8000"
