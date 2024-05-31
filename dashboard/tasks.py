@@ -48,7 +48,14 @@ def get_scheduled_serialized_data(db_results):
 async def import_contract_rows(self: celery.Task, data):
     for row in data:
         try:
-            instance = Contract(contract_number=row.get('contract_number'), service_type=row.get('service_type'), customer_account_name=row.get('customer_account_name'), meta_data=json.dumps(row.get('meta_data')), json_object=json.dumps(row), uploaded=False)
+            instance = Contract(
+                contract_number=row.get('contract_number'), 
+                service_type=row.get('service_type'), 
+                customer_account_name=row.get('customer_account_name'), 
+                meta_data=json.dumps(row.get('meta_data')), 
+                json_object=json.dumps(row), 
+                uploaded=False
+            )
             await sync_to_async(instance.save)()
         except:
             print("An exception occurred, while importing contract!!")

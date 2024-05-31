@@ -82,16 +82,26 @@ async def bulk_contract_import(request):
 
     return JsonResponse({"message": "Contract Requests Import in Progress!!"}, safe=False)
 
+def serialize_failed_contracts(failed_contracts):
+    serializer = FailedContractSerializer(failed_contracts, many=True)
+    return serializer.data
+
+
 @api_view(['GET'])
 async def failed_contract_imports(request):
-    failed_contracts = await sync_to_async(FailedContract.objects.get)()
-    failed_contracts_serialized = await sync_to_async(FailedContractSerializer)(failed_contracts, many=True)
-
-    return JsonResponse(failed_contracts_serialized, safe=False)
+    failed_contracts = await sync_to_async(FailedContract.objects.filter)()
+    failed_contracts_data = await sync_to_async(serialize_failed_contracts)(failed_contracts)
+    
+    return JsonResponse(failed_contracts_data, safe=False)
 
 @api_view(['GET'])
 async def contract_import_status(request):
-    return JsonResponse(app.control.inspect().active(), safe=False)
+    data = app.control.inspect().active()
+    for key, tasks in data.items():
+        for task in tasks:
+            if task.get('type') and task.get('type') == "dashboard.tasks.import_contract_rows":
+                return JsonResponse({'status': 'Contract import in progress!'}, safe=False)
+    return JsonResponse({'status': 'No contract import running!'}, safe=False)
 
 @api_view(['POST'])
 async def bulk_recurring_payment_request_import(request):
