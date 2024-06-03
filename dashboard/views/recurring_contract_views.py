@@ -1,5 +1,4 @@
 from adrf.decorators import api_view
-from rest_framework.response import Response
 from yayawallet_python_sdk.api import recurring_contract
 from django.http.response import JsonResponse
 from asgiref.sync import sync_to_async
@@ -122,6 +121,29 @@ async def contract_import_status(request):
 
 @api_view(['POST'])
 async def bulk_recurring_payment_request_import(request):
-    import_recurring_payment_request_rows.delay(request)
+    uploaded_file = request.FILES.get('file')
+    if not uploaded_file:
+        return HttpResponseBadRequest("No file uploaded.")
+    
+    file_name = uploaded_file.name
+
+    if file_name.endswith('.csv'):
+        try:
+            df = pd.read_csv(uploaded_file)
+        except Exception as e:
+            return HttpResponseBadRequest(f"Error reading CSV file: {e}")
+    elif file_name.endswith(('.xls', '.xlsx')):
+        try:
+            df = pd.read_excel(uploaded_file)
+        except Exception as e:
+            return HttpResponseBadRequest(f"Error reading Excel file: {e}")
+    else:
+        return HttpResponseBadRequest("The uploaded file is not a CSV or Excel file.")
+
+    try:
+        data = df.to_dict(orient='records')
+    except Exception as e:
+        return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
+    import_recurring_payment_request_rows.delay(data)
 
     return JsonResponse({"message": "Recurring Payment Requests Import in Progress!!"}, safe=False)
