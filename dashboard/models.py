@@ -30,12 +30,15 @@ class Contract(models.Model):
     class Meta:
         unique_together = ('contract_number', 'customer_account_name',)
 
-class FailedContract(models.Model):
+class FailedImports(models.Model):
     uuid = models.UUIDField( 
          primary_key = True, 
          default = uuid.uuid4, 
          editable = False) 
     json_object = models.CharField()
+    error_message = models.CharField()
+    import_type = models.CharField()
+
 
 class RecurringPaymentRequest(models.Model):
     uuid = models.UUIDField( 

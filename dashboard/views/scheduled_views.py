@@ -7,6 +7,7 @@ from asgiref.sync import sync_to_async
 from django.http import HttpResponseBadRequest
 from ..models import Scheduled
 import json
+import pandas as pd
 from dashboard.tasks import import_scheduled_rows
 from io import TextIOWrapper
 import csv
@@ -36,17 +37,29 @@ async def proxy_archive_schedule(request, id):
     
 @api_view(['POST'])
 async def bulk_schedule_import(request):
-    uploaded_file = request.FILES['file']
-    if not uploaded_file or (not uploaded_file.name.endswith('.csv') and not uploaded_file.name.endswith('.xlsx')):
-        return HttpResponseBadRequest("The uploaded file is not a CSV or XLSX file.")
+    uploaded_file = request.FILES.get('file')
+    if not uploaded_file:
+        return HttpResponseBadRequest("No file uploaded.")
+    
+    file_name = uploaded_file.name
 
-    instances = []
-    with TextIOWrapper(uploaded_file, encoding='utf-8') as csvfile:
-        reader = csv.reader(csvfile)
-        for row in reader:
-            instance = Scheduled(account_number=row[0], amount=row[1], reason=row[2], recurring=row[3], start_at=row[4], meta_data=json.dumps(row[5]), json_object=json.dumps(row), uploaded=False)
-            instances.append(instance)
-    await sync_to_async(Scheduled.objects.bulk_create)(instances)
-    import_scheduled_rows.delay()
+    if file_name.endswith('.csv'):
+        try:
+            df = pd.read_csv(uploaded_file)
+        except Exception as e:
+            return HttpResponseBadRequest(f"Error reading CSV file: {e}")
+    elif file_name.endswith(('.xls', '.xlsx')):
+        try:
+            df = pd.read_excel(uploaded_file)
+        except Exception as e:
+            return HttpResponseBadRequest(f"Error reading Excel file: {e}")
+    else:
+        return HttpResponseBadRequest("The uploaded file is not a CSV or Excel file.")
+
+    try:
+        data = df.to_dict(orient='records')
+    except Exception as e:
+        return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
+    import_scheduled_rows.delay(data)
 
     return JsonResponse({"message": "Scheduled Payments Import in Progress!!"}, safe=False)
