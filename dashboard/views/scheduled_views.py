@@ -5,12 +5,10 @@ from adrf.decorators import api_view
 from django.http.response import JsonResponse
 from asgiref.sync import sync_to_async
 from django.http import HttpResponseBadRequest
-from ..models import Scheduled
-import json
+from ..models import ImportedDocuments
 import pandas as pd
 from dashboard.tasks import import_scheduled_rows
-from io import TextIOWrapper
-import csv
+from ..constants import ImportTypes
 
 @api_view(['POST'])
 async def proxy_create_schedule(request):
@@ -60,6 +58,9 @@ async def bulk_schedule_import(request):
         data = df.to_dict(orient='records')
     except Exception as e:
         return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
-    import_scheduled_rows.delay(data)
+    instance = ImportedDocuments(file_name=file_name, remark="", import_type=ImportTypes.get('SCHEDULED'))    
+    await sync_to_async(instance.save)()
+    saved_id = instance.uuid
+    import_scheduled_rows.delay(data, saved_id)
 
     return JsonResponse({"message": "Scheduled Payments Import in Progress!!"}, safe=False)

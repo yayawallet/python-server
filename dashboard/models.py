@@ -1,6 +1,17 @@
 import uuid 
 from django.db import models
 
+class ImportedDocuments(models.Model):
+    uuid = models.UUIDField( 
+         primary_key = True, 
+         default = uuid.uuid4, 
+         editable = False)
+    file_name = models.CharField()
+    remark = models.CharField()
+    import_type = models.CharField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
 class Scheduled(models.Model):
     uuid = models.UUIDField( 
          primary_key = True, 
@@ -14,6 +25,9 @@ class Scheduled(models.Model):
     meta_data = models.CharField()
     json_object = models.CharField()
     uploaded = models.BooleanField()
+    imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 class Contract(models.Model):
     uuid = models.UUIDField( 
@@ -26,6 +40,9 @@ class Contract(models.Model):
     meta_data = models.CharField()
     json_object = models.CharField()
     uploaded = models.BooleanField()
+    imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ('contract_number', 'customer_account_name',)
@@ -37,7 +54,9 @@ class FailedImports(models.Model):
          editable = False) 
     json_object = models.CharField()
     error_message = models.CharField()
-    import_type = models.CharField()
+    imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 
 class RecurringPaymentRequest(models.Model):
@@ -53,3 +72,6 @@ class RecurringPaymentRequest(models.Model):
     meta_data = models.CharField()
     json_object = models.CharField()
     uploaded = models.BooleanField()
+    imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

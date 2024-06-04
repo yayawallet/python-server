@@ -12,6 +12,7 @@ urlpatterns = [
     path('', include('dashboard.urls.transfer_urls')),
     path('', include('dashboard.urls.user_urls')),
     path('', include('dashboard.urls.scheduled_urls')),
+    path('', include('dashboard.urls.report_urls')),
     path('', include('dashboard.urls.auth_urls')),
     path('admin', admin.site.urls),
 ]

@@ -3,8 +3,9 @@ from yayawallet_python_sdk.api import recurring_contract
 from django.http.response import JsonResponse
 from asgiref.sync import sync_to_async
 from .stream_response import stream_response
-from ..models import FailedContract
-from ..serializers.serializers import FailedContractSerializer
+from ..models import FailedImports, ImportedDocuments
+from ..serializers.serializers import FailedImportsSerializer
+from ..constants import ImportTypes
 from django.http import HttpResponseBadRequest
 import pandas as pd
 from dashboard.tasks import import_contract_rows, import_recurring_payment_request_rows
@@ -94,30 +95,16 @@ async def bulk_contract_import(request):
         data = df.to_dict(orient='records')
     except Exception as e:
         return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
-    import_contract_rows.delay(data)
+    instance = ImportedDocuments(file_name=file_name, remark="", import_type=ImportTypes.get('CONTRACT'))    
+    await sync_to_async(instance.save)()
+    saved_id = instance.uuid
+    import_contract_rows.delay(data, saved_id)
 
     return JsonResponse({"message": "Contract Requests Import in Progress!!"}, safe=False)
 
 def serialize_failed_contracts(failed_contracts):
-    serializer = FailedContractSerializer(failed_contracts, many=True)
+    serializer = FailedImportsSerializer(failed_contracts, many=True)
     return serializer.data
-
-
-@api_view(['GET'])
-async def failed_contract_imports(request):
-    failed_contracts = await sync_to_async(FailedContract.objects.filter)()
-    failed_contracts_data = await sync_to_async(serialize_failed_contracts)(failed_contracts)
-    
-    return JsonResponse(failed_contracts_data, safe=False)
-
-@api_view(['GET'])
-async def contract_import_status(request):
-    data = app.control.inspect().active()
-    for key, tasks in data.items():
-        for task in tasks:
-            if task.get('type') and task.get('type') == "dashboard.tasks.import_contract_rows":
-                return JsonResponse({'status': 'Contract import in progress!'}, safe=False)
-    return JsonResponse({'status': 'No contract import running!'}, safe=False)
 
 @api_view(['POST'])
 async def bulk_recurring_payment_request_import(request):
@@ -144,6 +131,9 @@ async def bulk_recurring_payment_request_import(request):
         data = df.to_dict(orient='records')
     except Exception as e:
         return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
-    import_recurring_payment_request_rows.delay(data)
+    instance = ImportedDocuments(file_name=file_name, remark="", import_type=ImportTypes.get('REQUEST_PAYMENT'))    
+    await sync_to_async(instance.save)()
+    saved_id = instance.uuid
+    import_recurring_payment_request_rows.delay(data, saved_id)
 
     return JsonResponse({"message": "Recurring Payment Requests Import in Progress!!"}, safe=False)
