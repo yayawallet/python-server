@@ -25,7 +25,7 @@ class Scheduled(models.Model):
     meta_data = models.CharField()
     json_object = models.CharField()
     uploaded = models.BooleanField()
-    imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE, related_name='imported document')
+    imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -40,7 +40,7 @@ class Contract(models.Model):
     meta_data = models.CharField()
     json_object = models.CharField()
     uploaded = models.BooleanField()
-    imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE, related_name='imported document')
+    imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -54,7 +54,7 @@ class FailedImports(models.Model):
          editable = False) 
     json_object = models.CharField()
     error_message = models.CharField()
-    imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE, related_name='imported document')
+    imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -72,6 +72,6 @@ class RecurringPaymentRequest(models.Model):
     meta_data = models.CharField()
     json_object = models.CharField()
     uploaded = models.BooleanField()
-    imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE, related_name='imported document')
+    imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

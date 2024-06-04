@@ -3,17 +3,17 @@ from __future__ import absolute_import, unicode_literals
 import celery
 from datetime import datetime
 from asgiref.sync import sync_to_async
-from .models import Scheduled, Contract, FailedImports, RecurringPaymentRequest
+from .models import Scheduled, Contract, FailedImports, RecurringPaymentRequest, ImportedDocuments
 from yayawallet_python_sdk.api import scheduled, recurring_contract
 from python_server.celery import app
 from .async_task import async_task
 from .serializers.serializers import ScheduledSerializer, ContractSerializer, RecurringPaymentRequestSerializer
 import json
 from django.shortcuts import get_object_or_404
-from constants import ImportTypes
+from .constants import ImportTypes
 
 @async_task(app, bind=True)
-async def import_scheduled_rows(self: celery.Task, data):    
+async def import_scheduled_rows(self: celery.Task, data, id):    
     for row in data:
         try:
             date_object = datetime.strptime(row.get('start_at'), "%d/%m/%Y")
@@ -28,14 +28,18 @@ async def import_scheduled_rows(self: celery.Task, data):
                 json_object=json.dumps(row), 
                 uploaded=False
             )
+            imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
+            instance.imported_document_id = imported_document
             await sync_to_async(instance.save)()
         except Exception as error:
-            print("An exception occurred, while importing scheduled payments!!")
+            print("An exception occurred, while importing scheduled payments!!", error)
             try:
-                instance = FailedImports(json_object=json.dumps(row), error_message=error, import_type=ImportTypes.get('SCHEDULED'))    
+                instance = FailedImports(json_object=json.dumps(row), error_message=error)    
+                imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
+                instance.imported_document_id = imported_document
                 await sync_to_async(instance.save)()
-            except:
-                print("An exception occurred, while saving failed scheduled payments!!")
+            except Exception as error:
+                print("An exception occurred, while saving failed scheduled payments!!", error)
     obj = await sync_to_async(Scheduled.objects.filter)(uploaded=False)
     dep= await sync_to_async(get_scheduled_serialized_data)(obj)
     count = 0
@@ -67,7 +71,7 @@ def get_scheduled_serialized_data(db_results):
     return serializer.data
 
 @async_task(app, bind=True)
-async def import_contract_rows(self: celery.Task, data):
+async def import_contract_rows(self: celery.Task, data, id):
     for row in data:
         try:
             instance = Contract(
@@ -78,14 +82,18 @@ async def import_contract_rows(self: celery.Task, data):
                 json_object=json.dumps(row), 
                 uploaded=False
             )
+            imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
+            instance.imported_document_id = imported_document
             await sync_to_async(instance.save)()
         except Exception as error:
-            print("An exception occurred, while importing contracts!!")
+            print("An exception occurred, while importing contracts!!", error)
             try:
-                instance = FailedImports(json_object=json.dumps(row), error_message=error, import_type=ImportTypes.get('CONTRACT'))    
+                instance = FailedImports(json_object=json.dumps(row), error_message=error)    
+                imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
+                instance.imported_document_id = imported_document
                 await sync_to_async(instance.save)()
-            except:
-                print("An exception occurred, while saving failed contracts!!")
+            except Exception as error:
+                print("An exception occurred, while saving failed contracts!!", error)
     obj = await sync_to_async(Contract.objects.filter)(uploaded=False)
     dep= await sync_to_async(get_contract_serialized_data)(obj)
     count = 0
@@ -115,7 +123,7 @@ def get_contract_serialized_data(db_results):
     return serializer.data
 
 @async_task(app, bind=True)
-async def import_recurring_payment_request_rows(self: celery.Task, data):
+async def import_recurring_payment_request_rows(self: celery.Task, data, id):
     for row in data:
         try:
             instance = RecurringPaymentRequest(
@@ -128,14 +136,18 @@ async def import_recurring_payment_request_rows(self: celery.Task, data):
                 json_object=json.dumps(row), 
                 uploaded=False
             )
+            imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
+            instance.imported_document_id = imported_document
             await sync_to_async(instance.save)()
         except Exception as error:
-            print("An exception occurred, while importing payment requests!!")
+            print("An exception occurred, while importing payment requests!!", error)
             try:
-                instance = FailedImports(json_object=json.dumps(row), error_message=error, import_type=ImportTypes.get('PAYMENT_REQUEST'))     
+                instance = FailedImports(json_object=json.dumps(row), error_message=error)     
+                imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
+                instance.imported_document_id = imported_document
                 await sync_to_async(instance.save)()
-            except:
-                print("An exception occurred, while saving failed payment requests!!")
+            except Exception as error:
+                print("An exception occurred, while saving failed payment requests!!", error)
     obj = await sync_to_async(RecurringPaymentRequest.objects.filter)(uploaded=False)
     dep= await sync_to_async(get_recurring_payment_request_serialized_data)(obj)
     count = 0
