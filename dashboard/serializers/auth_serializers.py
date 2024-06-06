@@ -8,6 +8,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         
         token['user_id'] = user.id
         token['username'] = user.username
+        token['permissions'] = list(user.get_all_permissions())
         
         return token
 
