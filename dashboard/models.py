@@ -1,5 +1,8 @@
 import uuid 
 from django.db import models
+from django.contrib.auth.models import User
+from django.dispatch import receiver
+from django.db.models.signals import post_save
 
 class ImportedDocuments(models.Model):
     uuid = models.UUIDField( 
@@ -75,3 +78,15 @@ class RecurringPaymentRequest(models.Model):
     imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    api_key = models.CharField()
+
+    def __str__(self):
+        return self.user.username
+    
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
