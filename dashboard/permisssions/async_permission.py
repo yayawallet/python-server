@@ -10,9 +10,7 @@ def async_permission_required(perm, raise_exception=False):
         @wraps(view_func)
         async def _wrapped_view(request, *args, **kwargs):
             auth_header = request.headers.get('Authorization')
-
             token = auth_header.split(' ')[1]
-            
             decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
             if perm in decoded_token.get("permissions"):
                 return await view_func(request, *args, **kwargs)
