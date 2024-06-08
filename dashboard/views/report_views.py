@@ -4,6 +4,7 @@ from ..serializers.serializers import ImportedDocumentsSerializer, FailedImports
 from ..constants import ImportTypes
 from asgiref.sync import sync_to_async
 from django.http.response import JsonResponse
+import jwt
 
 def get_imported_documents_serialized_data(db_results):
     serializer = ImportedDocumentsSerializer(db_results, many=True)
@@ -27,8 +28,11 @@ def get_recurring_payment_request_serialized_data(db_results):
 
 @api_view(['GET'])
 async def proxy_report_list(request):
+    auth_header = request.headers.get('Authorization')
+    token = auth_header.split(' ')[1]
+    decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
     document_type = request.GET.get('document_type')
-    imported_documents_by_type_obj = ImportedDocuments.objects.filter(import_type=ImportTypes[document_type])
+    imported_documents_by_type_obj = ImportedDocuments.objects.filter(import_type=ImportTypes[document_type], user_id=decoded_token.get("user_id"))
     imported_documents_by_type = await sync_to_async(get_imported_documents_serialized_data)(imported_documents_by_type_obj)
     return JsonResponse(imported_documents_by_type, safe=False)
 

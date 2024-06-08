@@ -1,5 +1,5 @@
 from adrf.decorators import api_view
-from rest_framework.response import Response
+from ..permisssions.async_permission import async_permission_required
 from yayawallet_python_sdk.api import transaction
 from .stream_response import stream_response
 
@@ -8,6 +8,7 @@ async def proxy_get_transaction_list_by_user(request):
     response = await transaction.get_transaction_list_by_user(None)
     return stream_response(response)
 
+@async_permission_required('auth.can_transfer_money', raise_exception=True)
 @api_view(['POST'])
 async def proxy_create_transaction(request):
     data = request.data
@@ -28,6 +29,7 @@ async def proxy_transaction_fee(request):
         )
     return stream_response(response)
 
+@async_permission_required('auth.generate_qr_url', raise_exception=True)
 @api_view(['POST'])
 async def proxy_generate_qr_url(request):
     data = request.data

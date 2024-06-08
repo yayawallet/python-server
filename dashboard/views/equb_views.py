@@ -1,8 +1,10 @@
 from adrf.decorators import api_view
 from rest_framework.response import Response
+from ..permisssions.async_permission import async_permission_required
 from yayawallet_python_sdk.api import equb
 from .stream_response import stream_response
 
+@async_permission_required('auth.create_equb', raise_exception=True)
 @api_view(['POST'])
 async def proxy_create_equb(request):
     data = request.data
@@ -19,6 +21,7 @@ async def proxy_create_equb(request):
         )
     return stream_response(response)
 
+@async_permission_required('auth.update_equb', raise_exception=True)
 @api_view(['POST'])
 async def proxy_update_equb(request):
     data = request.data
