@@ -7,6 +7,7 @@ from ..models import FailedImports, ImportedDocuments
 from ..serializers.serializers import FailedImportsSerializer
 from ..constants import ImportTypes
 from django.http import HttpResponseBadRequest
+from ..permisssions.async_permission import async_permission_required
 import pandas as pd
 from dashboard.tasks import import_contract_rows, import_recurring_payment_request_rows
 from python_server.celery import app
@@ -16,6 +17,7 @@ async def proxy_list_all_contracts(request):
     response = await recurring_contract.list_all_contracts()
     return stream_response(response)
 
+@async_permission_required('auth.create_contract', raise_exception=True)
 @api_view(['POST'])
 async def proxy_create_contract(request):
     data = request.data
@@ -27,6 +29,7 @@ async def proxy_create_contract(request):
         )
     return stream_response(response)
 
+@async_permission_required('auth.request_payment', raise_exception=True)
 @api_view(['POST'])
 async def proxy_request_payment(request):
     data = request.data
@@ -70,6 +73,7 @@ async def proxy_deactivate_subscription(request, id):
     response = await recurring_contract.deactivate_subscription(id)
     return stream_response(response)
 
+@async_permission_required('auth.bulk_import_contract', raise_exception=True)
 @api_view(['POST'])
 async def bulk_contract_import(request):
     uploaded_file = request.FILES.get('file')
@@ -106,6 +110,7 @@ def serialize_failed_contracts(failed_contracts):
     serializer = FailedImportsSerializer(failed_contracts, many=True)
     return serializer.data
 
+@async_permission_required('auth.bulk_import_request_payment', raise_exception=True)
 @api_view(['POST'])
 async def bulk_recurring_payment_request_import(request):
     uploaded_file = request.FILES.get('file')

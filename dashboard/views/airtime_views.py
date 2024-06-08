@@ -1,8 +1,10 @@
 from adrf.decorators import api_view
 from rest_framework.response import Response
+from ..permisssions.async_permission import async_permission_required
 from yayawallet_python_sdk.api import airtime
 from .stream_response import stream_response
 
+@async_permission_required('auth.buy_airtime', raise_exception=True)
 @api_view(['POST'])
 async def proxy_buy_airtime(request):
     data = request.data
@@ -12,6 +14,7 @@ async def proxy_buy_airtime(request):
         )
     return stream_response(response)
 
+@async_permission_required('auth.buy_package', raise_exception=True)
 @api_view(['POST'])
 async def proxy_buy_package(request):
     data = request.data

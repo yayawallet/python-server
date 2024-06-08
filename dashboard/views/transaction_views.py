@@ -29,6 +29,7 @@ async def proxy_transaction_fee(request):
         )
     return stream_response(response)
 
+@async_permission_required('auth.generate_qr_url', raise_exception=True)
 @api_view(['POST'])
 async def proxy_generate_qr_url(request):
     data = request.data
