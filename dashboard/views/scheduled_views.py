@@ -58,7 +58,7 @@ async def bulk_schedule_import(request):
         data = df.to_dict(orient='records')
     except Exception as e:
         return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
-    instance = ImportedDocuments(file_name=file_name, remark="", import_type=ImportTypes.get('SCHEDULED'))    
+    instance = ImportedDocuments(file_name=file_name, remark=request.POST.get('remark'), import_type=ImportTypes.get('SCHEDULED'))    
     await sync_to_async(instance.save)()
     saved_id = instance.uuid
     import_scheduled_rows.delay(data, saved_id)

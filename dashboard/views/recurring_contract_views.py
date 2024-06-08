@@ -95,7 +95,7 @@ async def bulk_contract_import(request):
         data = df.to_dict(orient='records')
     except Exception as e:
         return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
-    instance = ImportedDocuments(file_name=file_name, remark="", import_type=ImportTypes.get('CONTRACT'))    
+    instance = ImportedDocuments(file_name=file_name, remark=request.POST.get('remark'), import_type=ImportTypes.get('CONTRACT'))    
     await sync_to_async(instance.save)()
     saved_id = instance.uuid
     import_contract_rows.delay(data, saved_id)
@@ -131,7 +131,7 @@ async def bulk_recurring_payment_request_import(request):
         data = df.to_dict(orient='records')
     except Exception as e:
         return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
-    instance = ImportedDocuments(file_name=file_name, remark="", import_type=ImportTypes.get('REQUEST_PAYMENT'))    
+    instance = ImportedDocuments(file_name=file_name, remark=request.POST.get('remark'), import_type=ImportTypes.get('REQUEST_PAYMENT'))    
     await sync_to_async(instance.save)()
     saved_id = instance.uuid
     import_recurring_payment_request_rows.delay(data, saved_id)
