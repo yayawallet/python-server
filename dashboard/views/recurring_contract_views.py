@@ -11,6 +11,8 @@ from ..permisssions.async_permission import async_permission_required
 import pandas as pd
 from dashboard.tasks import import_contract_rows, import_recurring_payment_request_rows
 from python_server.celery import app
+import jwt
+from django.contrib.auth.models import User
 
 @api_view(['GET'])
 async def proxy_list_all_contracts(request):
@@ -99,7 +101,11 @@ async def bulk_contract_import(request):
         data = df.to_dict(orient='records')
     except Exception as e:
         return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
-    instance = ImportedDocuments(file_name=file_name, remark=request.POST.get('remark'), import_type=ImportTypes.get('CONTRACT'))    
+    auth_header = request.headers.get('Authorization')
+    token = auth_header.split(' ')[1]
+    decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
+    logged_in_user = await sync_to_async(User.objects.get)(id=decoded_token.get("user_id"))
+    instance = ImportedDocuments(file_name=file_name, remark=request.POST.get('remark'), import_type=ImportTypes.get('CONTRACT'), user_id=logged_in_user)    
     await sync_to_async(instance.save)()
     saved_id = instance.uuid
     import_contract_rows.delay(data, saved_id)
@@ -136,7 +142,11 @@ async def bulk_recurring_payment_request_import(request):
         data = df.to_dict(orient='records')
     except Exception as e:
         return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
-    instance = ImportedDocuments(file_name=file_name, remark=request.POST.get('remark'), import_type=ImportTypes.get('REQUEST_PAYMENT'))    
+    auth_header = request.headers.get('Authorization')
+    token = auth_header.split(' ')[1]
+    decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
+    logged_in_user = await sync_to_async(User.objects.get)(id=decoded_token.get("user_id"))
+    instance = ImportedDocuments(file_name=file_name, remark=request.POST.get('remark'), import_type=ImportTypes.get('REQUEST_PAYMENT'), user_id=logged_in_user)    
     await sync_to_async(instance.save)()
     saved_id = instance.uuid
     import_recurring_payment_request_rows.delay(data, saved_id)

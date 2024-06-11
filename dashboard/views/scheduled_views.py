@@ -10,6 +10,8 @@ from ..models import ImportedDocuments
 import pandas as pd
 from dashboard.tasks import import_scheduled_rows
 from ..constants import ImportTypes
+import jwt
+from django.contrib.auth.models import User
 
 @async_permission_required('auth.create_schedule', raise_exception=True)
 @api_view(['POST'])
@@ -61,7 +63,11 @@ async def bulk_schedule_import(request):
         data = df.to_dict(orient='records')
     except Exception as e:
         return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
-    instance = ImportedDocuments(file_name=file_name, remark=request.POST.get('remark'), import_type=ImportTypes.get('SCHEDULED'))    
+    auth_header = request.headers.get('Authorization')
+    token = auth_header.split(' ')[1]
+    decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
+    logged_in_user = await sync_to_async(User.objects.get)(id=decoded_token.get("user_id"))
+    instance = await sync_to_async(ImportedDocuments(file_name=file_name, remark=request.POST.get('remark'), import_type=ImportTypes.get('SCHEDULED'), user_id=logged_in_user))    
     await sync_to_async(instance.save)()
     saved_id = instance.uuid
     import_scheduled_rows.delay(data, saved_id)
