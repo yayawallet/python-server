@@ -7,7 +7,7 @@ from .models import Scheduled, Contract, FailedImports, RecurringPaymentRequest,
 from yayawallet_python_sdk.api import scheduled, recurring_contract
 from python_server.celery import app
 from .async_task import async_task
-from .serializers.serializers import ScheduledSerializer, ContractSerializer, RecurringPaymentRequestSerializer
+from .serializers.serializers import ScheduledSerializer, ContractSerializer, RecurringPaymentRequestSerializer, FailedImportsSerializer
 import json
 from django.shortcuts import get_object_or_404
 from .constants import ImportTypes
@@ -53,6 +53,18 @@ async def import_scheduled_rows(self: celery.Task, data, id):
             scheduled_object.uploaded = True
             await sync_to_async(scheduled_object.save)()
         count = count + 1
+
+    failed_imports_obj = await sync_to_async(FailedImports.objects.filter)(imported_document_id=id)
+    failed_imports = await sync_to_async(get_failed_imports_serialized_data)(failed_imports_obj)
+    uploaded_obj = await sync_to_async(Scheduled.objects.filter)(uploaded=True, imported_document_id=id)
+    uploaded = await sync_to_async(get_scheduled_serialized_data)(uploaded_obj)
+    on_queue_obj = await sync_to_async(Scheduled.objects.filter)(uploaded=False, imported_document_id=id)
+    on_queue = await sync_to_async(get_scheduled_serialized_data)(on_queue_obj)
+    imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
+    imported_document.failed_count = len(failed_imports)
+    imported_document.successful_count = len(uploaded)
+    imported_document.on_queue_count = len(on_queue)
+    await sync_to_async(imported_document.save)()
 
 
 async def scheduled_row_upload(data):
@@ -108,6 +120,18 @@ async def import_contract_rows(self: celery.Task, data, id):
             await sync_to_async(contract_object.save)()
         count = count + 1
 
+    failed_imports_obj = await sync_to_async(FailedImports.objects.filter)(imported_document_id=id)
+    failed_imports = await sync_to_async(get_failed_imports_serialized_data)(failed_imports_obj)
+    uploaded_obj = await sync_to_async(Contract.objects.filter)(uploaded=True, imported_document_id=id)
+    uploaded = await sync_to_async(get_contract_serialized_data)(uploaded_obj)
+    on_queue_obj = await sync_to_async(Contract.objects.filter)(uploaded=False, imported_document_id=id)
+    on_queue = await sync_to_async(get_contract_serialized_data)(on_queue_obj)
+    imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
+    imported_document.failed_count = len(failed_imports)
+    imported_document.successful_count = len(uploaded)
+    imported_document.on_queue_count = len(on_queue)
+    await sync_to_async(imported_document.save)()
+
 
 async def contract_row_upload(data):
     response = await recurring_contract.create_contract(
@@ -162,6 +186,18 @@ async def import_recurring_payment_request_rows(self: celery.Task, data, id):
             await sync_to_async(recurring_payment_request_object.save)()
         count = count + 1
 
+    failed_imports_obj = await sync_to_async(FailedImports.objects.filter)(imported_document_id=id)
+    failed_imports = await sync_to_async(get_failed_imports_serialized_data)(failed_imports_obj)
+    uploaded_obj = await sync_to_async(RecurringPaymentRequest.objects.filter)(uploaded=True, imported_document_id=id)
+    uploaded = await sync_to_async(get_recurring_payment_request_serialized_data)(uploaded_obj)
+    on_queue_obj = await sync_to_async(RecurringPaymentRequest.objects.filter)(uploaded=False, imported_document_id=id)
+    on_queue = await sync_to_async(get_recurring_payment_request_serialized_data)(on_queue_obj)
+    imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
+    imported_document.failed_count = len(failed_imports)
+    imported_document.successful_count = len(uploaded)
+    imported_document.on_queue_count = len(on_queue)
+    await sync_to_async(imported_document.save)()
+
 
 async def recurring_payment_request_row_upload(data):
     response = await recurring_contract.request_payment(
@@ -176,4 +212,8 @@ async def recurring_payment_request_row_upload(data):
 
 def get_recurring_payment_request_serialized_data(db_results):
     serializer = RecurringPaymentRequestSerializer(db_results, many=True)
+    return serializer.data
+
+def get_failed_imports_serialized_data(db_results):
+    serializer = FailedImportsSerializer(db_results, many=True)
     return serializer.data
