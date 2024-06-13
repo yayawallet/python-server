@@ -2,6 +2,7 @@ from django.urls import path
 from ..views import transaction_views
 
 urlpatterns = [
+    path('', transaction_views.proxy_get_transaction_list_by_user, name='get-transaction-list-by-user2'),
     path('transaction/find-by-user', transaction_views.proxy_get_transaction_list_by_user, name='get-transaction-list-by-user'),
     path('transaction/create', transaction_views.proxy_create_transaction, name='create-transaction'),
     path('transaction/fee', transaction_views.proxy_transaction_fee, name='transaction-fee'),
