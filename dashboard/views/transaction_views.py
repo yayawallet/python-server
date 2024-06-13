@@ -2,11 +2,12 @@ from adrf.decorators import api_view
 from ..permisssions.async_permission import async_permission_required
 from yayawallet_python_sdk.api import transaction
 from .stream_response import stream_response
+from django.http.response import JsonResponse
 
-@api_view(['GET'])
+@api_view(['POST'])
 async def proxy_get_transaction_list_by_user(request):
-    response = await transaction.get_transaction_list_by_user(None)
-    return stream_response(response)
+    data = request.data
+    return JsonResponse(data, safe=False)
 
 @async_permission_required('auth.can_transfer_money', raise_exception=True)
 @api_view(['POST'])
