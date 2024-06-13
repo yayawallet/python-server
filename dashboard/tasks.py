@@ -34,7 +34,7 @@ async def import_scheduled_rows(self: celery.Task, data, id):
         except Exception as error:
             print("An exception occurred, while importing scheduled payments!!", error)
             try:
-                instance = FailedImports(json_object=json.dumps(row), error_message=error)    
+                instance = FailedImports(json_object=json.dumps(row, indent=4, sort_keys=True, default=str), error_message=error)    
                 imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
                 instance.imported_document_id = imported_document
                 await sync_to_async(instance.save)()
@@ -100,7 +100,7 @@ async def import_contract_rows(self: celery.Task, data, id):
         except Exception as error:
             print("An exception occurred, while importing contracts!!", error)
             try:
-                instance = FailedImports(json_object=json.dumps(row), error_message=error)    
+                instance = FailedImports(json_object=json.dumps(row, indent=4, sort_keys=True, default=str), error_message=error)    
                 imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
                 instance.imported_document_id = imported_document
                 await sync_to_async(instance.save)()
@@ -166,7 +166,7 @@ async def import_recurring_payment_request_rows(self: celery.Task, data, id):
         except Exception as error:
             print("An exception occurred, while importing payment requests!!", error)
             try:
-                instance = FailedImports(json_object=json.dumps(row), error_message=error)     
+                instance = FailedImports(json_object=json.dumps(row, indent=4, sort_keys=True, default=str), error_message=error)     
                 imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
                 instance.imported_document_id = imported_document
                 await sync_to_async(instance.save)()
