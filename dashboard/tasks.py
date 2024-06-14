@@ -12,11 +12,30 @@ import json
 from django.shortcuts import get_object_or_404
 from .constants import ImportTypes
 
+def process_date(start_at):
+    if isinstance(start_at, datetime):
+        return start_at.strftime("%d-%m-%Y")
+    elif isinstance(start_at, str):
+        return start_at
+    else:
+        return "1970-01-01"
+    
+def process_meta_data(meta_data):
+    empty_obj = {}
+    if meta_data:
+        try:
+            return json.loads(meta_data)
+        except:
+            return empty_obj
+    else:
+        return empty_obj
+
 @async_task(app, bind=True)
 async def import_scheduled_rows(self: celery.Task, data, id):    
     for row in data:
         try:
-            date_object = datetime.strptime(row.get('start_at').strftime("%d/%m/%Y"), "%d/%m/%Y")
+            processed_date = process_date(row.get('start_at'))
+            date_object = datetime.strptime(processed_date, "%d-%m-%Y")
             unix_timestamp = int(date_object.timestamp())
             instance = Scheduled(
                 account_number=row.get('account_number'), 
@@ -74,7 +93,7 @@ async def scheduled_row_upload(data):
         data.get('reason'), 
         data.get('recurring'), 
         data.get('start_at'), 
-        data.get('meta_data')
+        process_meta_data(data.get('meta_data'))
         )
     return response
 
