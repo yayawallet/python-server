@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.dispatch import receiver
 from django.db.models.signals import post_save
+from django.db.models import Q
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -31,7 +32,19 @@ class ImportedDocuments(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+SCHEDULING_CHOICES = [
+    ('draft', 'Draft'),
+    ('published', 'Published'),
+    ('archived', 'Archived'),
+]
+
 class Scheduled(models.Model):
+    SCHEDULING_CHOICES = [
+        ('once', 'once'),
+        ('daily', 'daily'),
+        ('weekly', 'weekly'),
+        ('monthly', 'monthly'),
+    ]
     uuid = models.UUIDField( 
          primary_key = True, 
          default = uuid.uuid4, 
@@ -39,7 +52,10 @@ class Scheduled(models.Model):
     account_number = models.CharField()
     amount = models.FloatField()
     reason = models.CharField()
-    recurring = models.CharField()
+    recurring = models.CharField(
+        max_length=10,
+        choices=SCHEDULING_CHOICES,
+    )
     start_at = models.CharField()
     meta_data = models.CharField()
     json_object = models.CharField()
@@ -47,6 +63,14 @@ class Scheduled(models.Model):
     imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=Q(recurring__in=['once', 'daily', 'weekly' 'monthly']),
+                name='recurring_valid_values'
+            ),
+        ]
 
 class Contract(models.Model):
     uuid = models.UUIDField( 
