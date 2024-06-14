@@ -16,7 +16,7 @@ from .constants import ImportTypes
 async def import_scheduled_rows(self: celery.Task, data, id):    
     for row in data:
         try:
-            date_object = datetime.strptime(row.get('start_at'), "%d/%m/%Y")
+            date_object = datetime.strptime(row.get('start_at').strftime("%d/%m/%Y"), "%d/%m/%Y")
             unix_timestamp = int(date_object.timestamp())
             instance = Scheduled(
                 account_number=row.get('account_number'), 
@@ -24,8 +24,8 @@ async def import_scheduled_rows(self: celery.Task, data, id):
                 reason=row.get('reason'), 
                 recurring=row.get('recurring'), 
                 start_at=unix_timestamp, 
-                meta_data=json.dumps(row.get('meta_data')), 
-                json_object=json.dumps(row), 
+                meta_data=json.dumps(row.get('meta_data'), indent=4, sort_keys=True, default=str), 
+                json_object=json.dumps(row, indent=4, sort_keys=True, default=str), 
                 uploaded=False
             )
             imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
@@ -90,8 +90,8 @@ async def import_contract_rows(self: celery.Task, data, id):
                 contract_number=row.get('contract_number'), 
                 service_type=row.get('service_type'), 
                 customer_account_name=row.get('customer_account_name'), 
-                meta_data=json.dumps(row.get('meta_data')), 
-                json_object=json.dumps(row), 
+                meta_data=json.dumps(row.get('meta_data'), indent=4, sort_keys=True, default=str), 
+                json_object=json.dumps(row, indent=4, sort_keys=True, default=str), 
                 uploaded=False
             )
             imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
