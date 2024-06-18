@@ -105,7 +105,15 @@ async def bulk_contract_import(request):
     token = auth_header.split(' ')[1]
     decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
     logged_in_user = await sync_to_async(User.objects.get)(id=decoded_token.get("user_id"))
-    instance = ImportedDocuments(file_name=file_name, remark=request.POST.get('remark'), import_type=ImportTypes.get('CONTRACT'), user_id=logged_in_user)    
+    instance = ImportedDocuments(
+        file_name=file_name, 
+        remark=request.POST.get('remark'), 
+        import_type=ImportTypes.get('CONTRACT'), 
+        failed_count=0, 
+        successful_count=0, 
+        on_queue_count=len(data),
+        user_id=logged_in_user
+    )    
     await sync_to_async(instance.save)()
     saved_id = instance.uuid
     import_contract_rows.delay(data, saved_id)
@@ -146,7 +154,15 @@ async def bulk_recurring_payment_request_import(request):
     token = auth_header.split(' ')[1]
     decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
     logged_in_user = await sync_to_async(User.objects.get)(id=decoded_token.get("user_id"))
-    instance = ImportedDocuments(file_name=file_name, remark=request.POST.get('remark'), import_type=ImportTypes.get('REQUEST_PAYMENT'), user_id=logged_in_user)    
+    instance = ImportedDocuments(
+        file_name=file_name, 
+        remark=request.POST.get('remark'), 
+        import_type=ImportTypes.get('REQUEST_PAYMENT'), 
+        failed_count=0, 
+        successful_count=0, 
+        on_queue_count=len(data),
+        user_id=logged_in_user
+    )    
     await sync_to_async(instance.save)()
     saved_id = instance.uuid
     import_recurring_payment_request_rows.delay(data, saved_id)
