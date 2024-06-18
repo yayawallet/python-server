@@ -69,7 +69,7 @@ async def proxy_report_detail(request, id):
     imported_documents_by_id_obj = ImportedDocuments.objects.filter(uuid=id)
     imported_documents_by_id = await sync_to_async(get_imported_documents_serialized_data)(imported_documents_by_id_obj)
     import_type = imported_documents_by_id[0].get("import_type")
-    import_metrics = await sync_to_async(calculate_upload_metrics)(id, import_type)
+    import_metrics = await calculate_upload_metrics(id, import_type)
     report = {
         'failed_count': len(import_metrics.get("failed_imports")),
         'uploaded_count': len(import_metrics.get("uploaded")),
