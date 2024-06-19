@@ -11,6 +11,7 @@ from .serializers.serializers import ScheduledSerializer, ContractSerializer, Re
 import json
 from django.shortcuts import get_object_or_404
 from .constants import ImportTypes
+import math
 
 def process_date(start_at):
     if isinstance(start_at, datetime):
@@ -37,9 +38,12 @@ async def import_scheduled_rows(self: celery.Task, data, id):
             processed_date = process_date(row.get('start_at'))
             date_object = datetime.strptime(processed_date, "%d-%m-%Y")
             unix_timestamp = int(date_object.timestamp())
+            parsed_amount = 0
+            if not math.isnan(row.get('amount')):
+                parsed_amount = row.get('amount')
             instance = Scheduled(
                 account_number=row.get('account_number'), 
-                amount=row.get('amount'), 
+                amount=parsed_amount, 
                 reason=row.get('reason'), 
                 recurring=row.get('recurring'), 
                 start_at=unix_timestamp, 
@@ -199,9 +203,12 @@ def get_contract_serialized_data(db_results):
 async def import_recurring_payment_request_rows(self: celery.Task, data, id):
     for row in data:
         try:
+            parsed_amount = 0
+            if not math.isnan(row.get('amount')):
+                parsed_amount = row.get('amount')
             instance = RecurringPaymentRequest(
                 contract_number=row.get('contract_number'), 
-                amount=row.get('amount'), 
+                amount=parsed_amount, 
                 currency=row.get('currency'), 
                 cause=row.get('cause'), 
                 notification_url=row.get('notification_url'), 
