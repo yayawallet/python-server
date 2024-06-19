@@ -8,8 +8,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         
         token['user_id'] = user.id
         token['username'] = user.username
-        token['roles'] = list(user.groups.values_list('name', flat=True))
-        token['permissions'] = list(user.get_group_permissions())
         
         return token
 
@@ -19,7 +17,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         refresh = self.get_token(self.user)
         data['refresh'] = str(refresh)
         data['access'] = str(refresh.access_token)
-        data['user_id'] = self.user.id
-        data['username'] = self.user.username
+        data['user'] = {
+            'user_id': self.user.id,
+            'username': self.user.username,
+            'roles': list(self.user.groups.values_list('name', flat=True)),
+            'permissions': list(self.user.get_group_permissions())
+        }
 
         return data
