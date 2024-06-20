@@ -25,6 +25,7 @@ BROKER_POOL_LIMIT = None
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
     'corsheaders',
     'django.contrib.admin',
     'dashboard.apps.DashboardConfig',
@@ -126,6 +127,44 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+JAZZMIN_UI_TWEAKS = {
+    "navbar_small_text": False,
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    "brand_colour": False,
+    "accent": "accent-indigo",
+    "navbar": "navbar-white navbar-light",
+    "no_navbar_border": False,
+    "navbar_fixed": False,
+    "layout_boxed": False,
+    "footer_fixed": False,
+    "sidebar_fixed": False,
+    "sidebar": "sidebar-light-indigo",
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": False,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_legacy_style": False,
+    "sidebar_nav_flat_style": False,
+    "theme": "pulse",
+    "dark_mode_theme": None,
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-outline-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success"
+    }
+}
+
+JAZZMIN_SETTINGS = {
+    "site_brand": "YaYa User Admin",
+    "site_header": "YaYa User Admin",
+    "site_logo": "assets/yaya-logo.svg",
+    "copyright": "YaYa PII",
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
