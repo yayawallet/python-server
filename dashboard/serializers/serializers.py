@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import Scheduled, Contract, FailedImports, ImportedDocuments, RecurringPaymentRequest
+from ..models import Scheduled, Contract, FailedImports, ImportedDocuments, RecurringPaymentRequest, UserProfile
 
 class ImportedDocumentsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -24,4 +24,9 @@ class FailedImportsSerializer(serializers.ModelSerializer):
 class RecurringPaymentRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = RecurringPaymentRequest 
+        fields = '__all__'
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile 
         fields = '__all__'
