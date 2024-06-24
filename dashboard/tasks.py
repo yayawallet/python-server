@@ -42,6 +42,7 @@ async def import_scheduled_rows(self: celery.Task, data, id):
             if not math.isnan(row.get('amount')):
                 parsed_amount = row.get('amount')
             instance = Scheduled(
+                row_number=row.get('row_number'), 
                 account_number=row.get('account_number'), 
                 amount=parsed_amount, 
                 reason=row.get('reason'), 
@@ -57,7 +58,7 @@ async def import_scheduled_rows(self: celery.Task, data, id):
         except Exception as error:
             print("An exception occurred, while importing scheduled payments!!", error)
             try:
-                instance = FailedImports(json_object=json.dumps(row, indent=4, sort_keys=True, default=str), error_message=error)    
+                instance = FailedImports(row_number=row.get('row_number'), json_object=json.dumps(row, indent=4, sort_keys=True, default=str), error_message=error)    
                 imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
                 instance.imported_document_id = imported_document
                 await sync_to_async(instance.save)()
@@ -82,7 +83,7 @@ async def import_scheduled_rows(self: celery.Task, data, id):
                     for chunk in resp.streaming_content:
                         if chunk:
                             content += chunk.decode('utf-8')
-                    failed_instance = FailedImports(json_object=json.dumps(row, indent=4, sort_keys=True, default=str), error_message=content)    
+                    failed_instance = FailedImports(row_number=row.get('row_number'), json_object=json.dumps(row, indent=4, sort_keys=True, default=str), error_message=content)    
                     failed_imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
                     failed_instance.imported_document_id = failed_imported_document
                     await sync_to_async(failed_instance.save)()
@@ -106,7 +107,6 @@ async def import_scheduled_rows(self: celery.Task, data, id):
 
 
 async def scheduled_row_upload(data):
-    print(data)
     response = await scheduled.create(
         data.get('account_number'), 
         data.get('amount'), 
@@ -126,6 +126,7 @@ async def import_contract_rows(self: celery.Task, data, id):
     for row in data:
         try:
             instance = Contract(
+                row_number=row.get('row_number'), 
                 contract_number=row.get('contract_number'), 
                 service_type=row.get('service_type'), 
                 customer_account_name=row.get('customer_account_name'), 
@@ -139,7 +140,7 @@ async def import_contract_rows(self: celery.Task, data, id):
         except Exception as error:
             print("An exception occurred, while importing contracts!!", error)
             try:
-                instance = FailedImports(json_object=json.dumps(row, indent=4, sort_keys=True, default=str), error_message=error)    
+                instance = FailedImports(row_number=row.get('row_number'), json_object=json.dumps(row, indent=4, sort_keys=True, default=str), error_message=error)    
                 imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
                 instance.imported_document_id = imported_document
                 await sync_to_async(instance.save)()
@@ -207,6 +208,7 @@ async def import_recurring_payment_request_rows(self: celery.Task, data, id):
             if not math.isnan(row.get('amount')):
                 parsed_amount = row.get('amount')
             instance = RecurringPaymentRequest(
+                row_number=row.get('row_number'), 
                 contract_number=row.get('contract_number'), 
                 amount=parsed_amount, 
                 currency=row.get('currency'), 

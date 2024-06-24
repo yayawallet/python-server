@@ -29,28 +29,9 @@ def get_recurring_payment_request_serialized_data(db_results):
 async def calculate_upload_metrics(id, import_type):
     failed_imports_obj = FailedImports.objects.filter(imported_document_id=id)
     failed_imports = await sync_to_async(get_failed_imports_serialized_data)(failed_imports_obj)
-    uploaded = []
-    on_queue = []
-    if import_type == ImportTypes.get('SCHEDULED'):
-        uploaded_obj = Scheduled.objects.filter(uploaded=True, imported_document_id=id)
-        uploaded = await sync_to_async(get_scheduled_serialized_data)(uploaded_obj)
-        on_queue_obj = Scheduled.objects.filter(uploaded=False, imported_document_id=id)
-        on_queue = await sync_to_async(get_scheduled_serialized_data)(on_queue_obj)
-    elif import_type == ImportTypes.get('CONTRACT'):
-        uploaded_obj = Contract.objects.filter(uploaded=True, imported_document_id=id)
-        uploaded = await sync_to_async(get_contract_serialized_data)(uploaded_obj)
-        on_queue_obj = Contract.objects.filter(uploaded=False, imported_document_id=id)
-        on_queue = await sync_to_async(get_contract_serialized_data)(on_queue_obj)
-    elif import_type == ImportTypes.get('REQUEST_PAYMENT'):
-        uploaded_obj = RecurringPaymentRequest.objects.filter(uploaded=True, imported_document_id=id)
-        uploaded = await sync_to_async(get_recurring_payment_request_serialized_data)(uploaded_obj)
-        on_queue_obj = RecurringPaymentRequest.objects.filter(uploaded=False, imported_document_id=id)
-        on_queue = await sync_to_async(get_recurring_payment_request_serialized_data)(on_queue_obj)
     
     return {
         'failed_imports': failed_imports,
-        'uploaded': uploaded,
-        'on_queue': on_queue,
     }
     
 
@@ -72,12 +53,7 @@ async def proxy_report_detail(request, id):
     import_metrics = await calculate_upload_metrics(id, import_type)
     report = {
         'failed_count': len(import_metrics.get("failed_imports")),
-        'uploaded_count': len(import_metrics.get("uploaded")),
-        'on_queue_count': len(import_metrics.get("on_queue")),
-        'total_count': len(import_metrics.get("failed_imports")) + len(import_metrics.get("uploaded")) + len(import_metrics.get("failed_imports")),
         'failed': import_metrics.get("failed_imports"),
-        'uploaded': import_metrics.get("uploaded"),
-        'on_queue': import_metrics.get("on_queue"),
     }
 
     return JsonResponse(report, safe=False)
