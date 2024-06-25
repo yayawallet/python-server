@@ -49,6 +49,7 @@ class Scheduled(models.Model):
          primary_key = True, 
          default = uuid.uuid4, 
          editable = False) 
+    row_number = models.IntegerField()
     account_number = models.CharField()
     amount = models.FloatField()
     reason = models.CharField()
@@ -77,6 +78,7 @@ class Contract(models.Model):
          primary_key = True, 
          default = uuid.uuid4, 
          editable = False) 
+    row_number = models.IntegerField()
     contract_number = models.CharField()
     service_type = models.CharField()
     customer_account_name = models.CharField()
@@ -95,6 +97,7 @@ class FailedImports(models.Model):
          primary_key = True, 
          default = uuid.uuid4, 
          editable = False) 
+    row_number = models.IntegerField()
     json_object = models.CharField()
     error_message = models.CharField()
     imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE)
@@ -107,6 +110,7 @@ class RecurringPaymentRequest(models.Model):
          primary_key = True, 
          default = uuid.uuid4, 
          editable = False) 
+    row_number = models.IntegerField()
     contract_number = models.CharField()
     amount = models.FloatField()
     currency = models.CharField()

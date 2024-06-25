@@ -96,6 +96,10 @@ async def bulk_contract_import(request):
             return HttpResponseBadRequest(f"Error reading Excel file: {e}")
     else:
         return HttpResponseBadRequest("The uploaded file is not a CSV or Excel file.")
+    
+    df.reset_index(inplace=True)
+    df.rename(columns={'index': 'row_number'}, inplace=True)
+    df['row_number'] += 2
 
     try:
         data = df.to_dict(orient='records')
@@ -145,6 +149,10 @@ async def bulk_recurring_payment_request_import(request):
             return HttpResponseBadRequest(f"Error reading Excel file: {e}")
     else:
         return HttpResponseBadRequest("The uploaded file is not a CSV or Excel file.")
+    
+    df.reset_index(inplace=True)
+    df.rename(columns={'index': 'row_number'}, inplace=True)
+    df['row_number'] += 2
 
     try:
         data = df.to_dict(orient='records')
