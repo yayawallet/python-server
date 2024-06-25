@@ -5,7 +5,9 @@ from .stream_response import stream_response
 
 @api_view(['GET'])
 async def proxy_get_transaction_list_by_user(request):
-    response = await transaction.get_transaction_list_by_user(None)
+    page = request.GET.get('p')
+    params = "?p=" + page
+    response = await transaction.get_transaction_list_by_user(params)
     return stream_response(response)
 
 @async_permission_required('auth.can_transfer_money', raise_exception=True)
