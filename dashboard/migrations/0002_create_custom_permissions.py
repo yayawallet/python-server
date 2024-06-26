@@ -110,6 +110,24 @@ def create_custom_permissions(apps, schema_editor):
         content_type=content_type,
     )
 
+    Permission.objects.create(
+        codename='create_bill',
+        name='Create Bill',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='create_bulk_bill',
+        name='Create Bulk Bill',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='update_bill',
+        name='Update Bill',
+        content_type=content_type,
+    )
+
 
 class Migration(migrations.Migration):
 
