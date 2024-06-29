@@ -6,6 +6,8 @@ from .stream_response import stream_response
 @api_view(['GET'])
 async def proxy_get_transaction_list_by_user(request):
     page = request.GET.get('p')
+    if not page:
+        page = "1"
     params = "?p=" + page
     response = await transaction.get_transaction_list_by_user(params)
     return stream_response(response)

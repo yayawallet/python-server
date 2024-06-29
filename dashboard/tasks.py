@@ -3,11 +3,11 @@ from __future__ import absolute_import, unicode_literals
 import celery
 from datetime import datetime
 from asgiref.sync import sync_to_async
-from .models import Scheduled, Contract, FailedImports, RecurringPaymentRequest, ImportedDocuments
-from yayawallet_python_sdk.api import scheduled, recurring_contract
+from .models import Scheduled, Contract, FailedImports, RecurringPaymentRequest, ImportedDocuments, Bill
+from yayawallet_python_sdk.api import scheduled, recurring_contract, bill
 from python_server.celery import app
 from .async_task import async_task
-from .serializers.serializers import ScheduledSerializer, ContractSerializer, RecurringPaymentRequestSerializer, FailedImportsSerializer
+from .serializers.serializers import ScheduledSerializer, ContractSerializer, RecurringPaymentRequestSerializer, FailedImportsSerializer, BillSerializer
 import json
 from django.shortcuts import get_object_or_404
 from .constants import ImportTypes
@@ -288,4 +288,86 @@ def get_recurring_payment_request_serialized_data(db_results):
 
 def get_failed_imports_serialized_data(db_results):
     serializer = FailedImportsSerializer(db_results, many=True)
+    return serializer.data
+
+@async_task(app, bind=True)
+async def import_bill_rows(self: celery.Task, data, id):
+    for row in data:
+        try:
+            processed_date_start = process_date(row.get('start_at'))
+            date_object_start = datetime.strptime(processed_date_start, "%d-%m-%Y")
+            unix_timestamp_start = int(date_object_start.timestamp())
+            processed_date_due = process_date(row.get('start_at'))
+            date_object_due = datetime.strptime(processed_date_due, "%d-%m-%Y")
+            unix_timestamp_due = int(date_object_due.timestamp())
+            parsed_amount = 0
+            if not math.isnan(row.get('amount')):
+                parsed_amount = row.get('amount')
+            instance = Bill(
+                row_number=row.get('row_number'), 
+                client_yaya_account=row.get('client_yaya_account'), 
+                customer_yaya_account=row.get('customer_yaya_account'), 
+                amount=parsed_amount, 
+                start_at=unix_timestamp_start, 
+                due_at=unix_timestamp_due, 
+                customer_id=row.get('customer_id'), 
+                bill_id=row.get('bill_id'), 
+                fwd_institution=row.get('fwd_institution'), 
+                fwd_account_number=row.get('fwd_account_number'), 
+                description=row.get('description'), 
+                phone=row.get('phone'), 
+                email=row.get('email'), 
+                details=row.get('details'), 
+                imported_document_id=row.get('details'), 
+                json_object=json.dumps(row, indent=4, sort_keys=True, default=str), 
+                uploaded=False
+            )
+            imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
+            instance.imported_document_id = imported_document
+            await sync_to_async(instance.save)()
+        except Exception as error:
+            print("An exception occurred, while importing bills!!", error)
+    obj = await sync_to_async(Bill.objects.filter)(uploaded=False, imported_document_id=id)
+    dep= await sync_to_async(get_bill_serialized_data)(obj)
+    count = 0
+    row_aggregate = []
+    row_aggregate_with_id = []
+    for row in dep:
+        details = ""
+        if row.get('details') != "" and row.get("details") != None:
+            details = json.loads(row.get('details'))
+        if count >= 0:
+            row_aggregate.append({"client_yaya_account": row.get('client_yaya_account'), "customer_yaya_account": row.get('customer_yaya_account'), "amount": row.get('amount'), "start_at": row.get('start_at'), "due_at": row.get('due_at'), "customer_id": row.get('customer_id'), "bill_id": row.get('bill_id'), "fwd_institution": row.get('fwd_institution'), "fwd_account_number": row.get('fwd_account_number'), "description": row.get('description'), "phone": row.get('phone '), "email": row.get('email'), "details": details})
+            row_aggregate_with_id.append({"uuid": row.get("uuid"), "client_yaya_account": row.get('client_yaya_account'), "customer_yaya_account": row.get('customer_yaya_account'), "amount": row.get('amount'), "start_at": row.get('start_at'), "due_at": row.get('due_at'), "customer_id": row.get('customer_id'), "bill_id": row.get('bill_id'), "fwd_institution": row.get('fwd_institution'), "fwd_account_number": row.get('fwd_account_number'), "description": row.get('description'), "phone": row.get('phone '), "email": row.get('email'), "details": details})
+            if (count+1)%10 == 0:
+                resp = await bill_bulk_upload(row_aggregate)
+                if resp.status_code == 200 or resp.status_code == 201:
+                    for bulk_row in row_aggregate_with_id:
+                        bill_object = await sync_to_async(get_object_or_404)(Bill, pk=bulk_row.get('uuid'))
+                        bill_object.uploaded = True
+                        await sync_to_async(bill_object.save)()
+                else:
+                    print("An exception occurred, while saving bulk bill!!", error)
+
+                row_aggregate = []
+                row_aggregate_with_id = []
+    
+        count = count + 1
+
+    uploaded_obj = await sync_to_async(Bill.objects.filter)(uploaded=True, imported_document_id=id)
+    uploaded = await sync_to_async(get_bill_serialized_data)(uploaded_obj)
+    on_queue_obj = await sync_to_async(Bill.objects.filter)(uploaded=False, imported_document_id=id)
+    on_queue = await sync_to_async(get_bill_serialized_data)(on_queue_obj)
+    imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
+    imported_document.successful_count = len(uploaded)
+    imported_document.on_queue_count = len(on_queue)
+    await sync_to_async(imported_document.save)()
+
+
+async def bill_bulk_upload(data):
+    response = await bill.create_bulk_bill(data)
+    return response
+
+def get_bill_serialized_data(db_results):
+    serializer = BillSerializer(db_results, many=True)
     return serializer.data

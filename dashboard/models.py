@@ -122,3 +122,28 @@ class RecurringPaymentRequest(models.Model):
     imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+class Bill(models.Model):
+    uuid = models.UUIDField( 
+         primary_key = True, 
+         default = uuid.uuid4, 
+         editable = False) 
+    row_number = models.IntegerField()
+    client_yaya_account = models.CharField()
+    customer_yaya_account = models.CharField(null=True, blank=True)
+    amount = models.FloatField()
+    start_at = models.CharField(null=True, blank=True)
+    due_at = models.CharField()
+    customer_id = models.CharField()
+    bill_id = models.CharField()
+    fwd_institution = models.CharField(null=True, blank=True)
+    fwd_account_number = models.CharField(null=True, blank=True)
+    description = models.CharField(null=True, blank=True)
+    phone = models.CharField(null=True, blank=True)
+    email = models.CharField(null=True, blank=True)
+    details = models.CharField(null=True, blank=True)
+    json_object = models.CharField()
+    uploaded = models.BooleanField()
+    imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
