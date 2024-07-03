@@ -15,7 +15,7 @@ import math
 
 def process_date(start_at):
     if isinstance(start_at, datetime):
-        return start_at.strftime("%d-%m-%Y")
+        return start_at.strftime("%Y-%m-%d")
     elif isinstance(start_at, str):
         return start_at
     else:
@@ -36,7 +36,7 @@ async def import_scheduled_rows(self: celery.Task, data, id):
     for row in data:
         try:
             processed_date = process_date(row.get('start_at'))
-            date_object = datetime.strptime(processed_date, "%d-%m-%Y")
+            date_object = datetime.strptime(processed_date, "%Y-%m-%d")
             unix_timestamp = int(date_object.timestamp())
             parsed_amount = 0
             if not math.isnan(row.get('amount')):
@@ -295,10 +295,10 @@ async def import_bill_rows(self: celery.Task, data, id):
     for row in data:
         try:
             processed_date_start = process_date(row.get('start_at'))
-            date_object_start = datetime.strptime(processed_date_start, "%d-%m-%Y")
+            date_object_start = datetime.strptime(processed_date_start, "%Y-%m-%d")
             unix_timestamp_start = int(date_object_start.timestamp())
             processed_date_due = process_date(row.get('start_at'))
-            date_object_due = datetime.strptime(processed_date_due, "%d-%m-%Y")
+            date_object_due = datetime.strptime(processed_date_due, "%Y-%m-%d")
             unix_timestamp_due = int(date_object_due.timestamp())
             parsed_amount = 0
             if not math.isnan(row.get('amount')):
