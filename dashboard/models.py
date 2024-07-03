@@ -90,7 +90,7 @@ class Contract(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('contract_number', 'customer_account_name',)
+        unique_together = ('contract_number', 'service_type',)
 
 class FailedImports(models.Model):
     uuid = models.UUIDField( 

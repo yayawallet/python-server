@@ -25,6 +25,8 @@ async def proxy_create_bill(request):
         data.get('due_at'), 
         data.get('customer_id'),
         data.get('bill_id'),
+        data.get('bill_code'),
+        data.get('bill_season'),
         data.get('fwd_institution'),
         data.get('fwd_account_number'),
         data.get('description'),
@@ -85,8 +87,7 @@ async def proxy_create_bulk_bill(request):
 
 @api_view(['GET'])
 async def proxy_bulk_bill_status(request):
-    data = request.data
-    response = await bill.bulk_bill_status(data.get("client_yaya_account"))
+    response = await bill.bulk_bill_status()
     return stream_response(response)
 
 @async_permission_required('auth.update_bill', raise_exception=True)
@@ -102,4 +103,17 @@ async def proxy_update_bill(request):
         data.get('phone'),
         data.get('email'),
         )
+    return stream_response(response)
+
+
+@api_view(['POST'])
+async def proxy_bill_list(request):
+    data = request.data
+    response = await bill.bulk_bill_list(data.get('client_yaya_account'))
+    return stream_response(response)
+
+@api_view(['POST'])
+async def proxy_bill_find(request):
+    data = request.data
+    response = await bill.bulk_bill_find(data.get('client_yaya_account'), data.get('bill_id'))
     return stream_response(response)
