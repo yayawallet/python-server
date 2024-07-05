@@ -316,7 +316,6 @@ async def import_bill_rows(self: celery.Task, data, id):
                     unix_timestamp_due = int(date_object_due.timestamp())
                 except:
                     unix_timestamp_due = int("0")
-                
             
             parsed_amount = 0
 
