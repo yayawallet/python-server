@@ -136,6 +136,8 @@ class Bill(models.Model):
     due_at = models.CharField()
     customer_id = models.CharField()
     bill_id = models.CharField()
+    bill_code = models.CharField(null=True, blank=True)
+    bill_season = models.CharField(null=True, blank=True)
     fwd_institution = models.CharField(null=True, blank=True)
     fwd_account_number = models.CharField(null=True, blank=True)
     description = models.CharField(null=True, blank=True)

@@ -19,7 +19,7 @@ def process_date(start_at):
     elif isinstance(start_at, str):
         return start_at
     else:
-        return "1970-01-01"
+        return "01-01-1970"
     
 def process_meta_data(meta_data):
     empty_obj = {}
@@ -292,6 +292,12 @@ def get_failed_imports_serialized_data(db_results):
 
 @async_task(app, bind=True)
 async def import_bill_rows(self: celery.Task, data, id):
+    direct_fields = [
+        'row_number', 'client_yaya_account', 'customer_yaya_account', 'amount',
+        'start_at', 'due_at', 'customer_id', 'bill_id', 'bill_code', 'bill_season',
+        'fwd_institution', 'fwd_account_number', 'description', 'phone', 'email'
+    ]
+
     for row in data:
         try:
             processed_date_start = process_date(row.get('start_at'))
@@ -300,7 +306,11 @@ async def import_bill_rows(self: celery.Task, data, id):
             processed_date_due = process_date(row.get('start_at'))
             date_object_due = datetime.strptime(processed_date_due, "%Y-%m-%d")
             unix_timestamp_due = int(date_object_due.timestamp())
+            
             parsed_amount = 0
+
+            details_dict = {k: v for k, v in row.items() if k not in direct_fields}
+
             if not math.isnan(row.get('amount')):
                 parsed_amount = row.get('amount')
             instance = Bill(
@@ -312,13 +322,14 @@ async def import_bill_rows(self: celery.Task, data, id):
                 due_at=unix_timestamp_due, 
                 customer_id=row.get('customer_id'), 
                 bill_id=row.get('bill_id'), 
+                bill_code=row.get('bill_code'), 
+                bill_season=row.get('bill_season'), 
                 fwd_institution=row.get('fwd_institution'), 
                 fwd_account_number=row.get('fwd_account_number'), 
                 description=row.get('description'), 
                 phone=row.get('phone'), 
                 email=row.get('email'), 
-                details=row.get('details'), 
-                imported_document_id=row.get('details'), 
+                details=details_dict, 
                 json_object=json.dumps(row, indent=4, sort_keys=True, default=str), 
                 uploaded=False
             )
@@ -335,11 +346,11 @@ async def import_bill_rows(self: celery.Task, data, id):
     for row in dep:
         details = ""
         if row.get('details') != "" and row.get("details") != None:
-            details = json.loads(row.get('details'))
+            details = row.get('details')
         if count >= 0:
-            row_aggregate.append({"client_yaya_account": row.get('client_yaya_account'), "customer_yaya_account": row.get('customer_yaya_account'), "amount": row.get('amount'), "start_at": row.get('start_at'), "due_at": row.get('due_at'), "customer_id": row.get('customer_id'), "bill_id": row.get('bill_id'), "fwd_institution": row.get('fwd_institution'), "fwd_account_number": row.get('fwd_account_number'), "description": row.get('description'), "phone": row.get('phone '), "email": row.get('email'), "details": details})
-            row_aggregate_with_id.append({"uuid": row.get("uuid"), "client_yaya_account": row.get('client_yaya_account'), "customer_yaya_account": row.get('customer_yaya_account'), "amount": row.get('amount'), "start_at": row.get('start_at'), "due_at": row.get('due_at'), "customer_id": row.get('customer_id'), "bill_id": row.get('bill_id'), "fwd_institution": row.get('fwd_institution'), "fwd_account_number": row.get('fwd_account_number'), "description": row.get('description'), "phone": row.get('phone '), "email": row.get('email'), "details": details})
-            if (count+1)%10 == 0:
+            row_aggregate.append({"client_yaya_account": row.get('client_yaya_account'), "customer_yaya_account": row.get('customer_yaya_account'), "amount": row.get('amount'), "start_at": row.get('start_at'), "due_at": row.get('due_at'), "customer_id": row.get('customer_id'), "bill_id": row.get('bill_id'), "bill_code": row.get('bill_code'), "bill_season": row.get('bill_season'), "fwd_institution": row.get('fwd_institution'), "fwd_account_number": row.get('fwd_account_number'), "description": row.get('description'), "phone": row.get('phone '), "email": row.get('email'), "details": details})
+            row_aggregate_with_id.append({"uuid": row.get("uuid"), "client_yaya_account": row.get('client_yaya_account'), "customer_yaya_account": row.get('customer_yaya_account'), "amount": row.get('amount'), "start_at": row.get('start_at'), "due_at": row.get('due_at'), "customer_id": row.get('customer_id'), "bill_id": row.get('bill_id'), "bill_code": row.get('bill_code'), "bill_season": row.get('bill_season'), "fwd_institution": row.get('fwd_institution'), "fwd_account_number": row.get('fwd_account_number'), "description": row.get('description'), "phone": row.get('phone '), "email": row.get('email'), "details": details})
+            if (count + 1) % 10 == 0 or count + 1 == (len(dep)%10):
                 resp = await bill_bulk_upload(row_aggregate)
                 if resp.status_code == 200 or resp.status_code == 201:
                     for bulk_row in row_aggregate_with_id:
