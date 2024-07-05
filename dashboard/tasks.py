@@ -338,7 +338,7 @@ async def import_bill_rows(self: celery.Task, data, id):
                 description=row.get('description'), 
                 phone=row.get('phone'), 
                 email=row.get('email'), 
-                details=details_dict, 
+                details=json.loads(details_dict), 
                 json_object=json.dumps(row, indent=4, sort_keys=True, default=str), 
                 uploaded=False
             )
