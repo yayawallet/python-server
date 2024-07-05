@@ -27,8 +27,7 @@ async def proxy_create_bill(request):
         data.get('bill_id'),
         data.get('bill_code'),
         data.get('bill_season'),
-        data.get('fwd_institution'),
-        data.get('fwd_account_number'),
+        data.get('cluster'),
         data.get('description'),
         data.get('phone'),
         data.get('email'),
@@ -109,7 +108,11 @@ async def proxy_update_bill(request):
 @api_view(['POST'])
 async def proxy_bill_list(request):
     data = request.data
-    response = await bill.bulk_bill_list(data.get('client_yaya_account'))
+    page = request.GET.get('p')
+    if not page:
+        page = "1"
+    params = "?p=" + page
+    response = await bill.bulk_bill_list(data.get('client_yaya_account'), params)
     return stream_response(response)
 
 @api_view(['POST'])
