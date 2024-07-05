@@ -108,7 +108,11 @@ async def proxy_update_bill(request):
 @api_view(['POST'])
 async def proxy_bill_list(request):
     data = request.data
-    response = await bill.bulk_bill_list(data.get('client_yaya_account'))
+    page = request.GET.get('p')
+    if not page:
+        page = "1"
+    params = "?p=" + page
+    response = await bill.bulk_bill_list(data.get('client_yaya_account'), params)
     return stream_response(response)
 
 @api_view(['POST'])
