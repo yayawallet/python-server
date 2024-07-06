@@ -300,22 +300,23 @@ async def import_bill_rows(self: celery.Task, data, id):
 
     for row in data:
         try:
-            unix_timestamp_start = ""
+            unix_timestamp_start = None
             if row.get('start_at') != None:
                 processed_date_start = process_date(row.get('start_at'))
                 try:
                     date_object_start = datetime.strptime(processed_date_start, "%Y-%m-%d")
                     unix_timestamp_due = int(date_object_start.timestamp())
                 except:
-                    unix_timestamp_due = int("0")
-            unix_timestamp_due = ""
+                    unix_timestamp_due = None
+            unix_timestamp_due = None
             if row.get('due_at') != None:
                 processed_date_due = process_date(row.get('due_at'))
                 try:
                     date_object_due = datetime.strptime(processed_date_due, "%Y-%m-%d")
                     unix_timestamp_due = int(date_object_due.timestamp())
                 except:
-                    unix_timestamp_due = int("0")
+                    unix_timestamp_due = None
+                
             
             parsed_amount = 0
 
@@ -338,7 +339,7 @@ async def import_bill_rows(self: celery.Task, data, id):
                 description=row.get('description'), 
                 phone=row.get('phone'), 
                 email=row.get('email'), 
-                details=json.loads(details_dict), 
+                details=details_dict, 
                 json_object=json.dumps(row, indent=4, sort_keys=True, default=str), 
                 uploaded=False
             )
@@ -353,13 +354,14 @@ async def import_bill_rows(self: celery.Task, data, id):
     row_aggregate = []
     row_aggregate_with_id = []
     for row in dep:
-        details = ""
+        details = {}
         if row.get('details') != "" and row.get("details") != None:
-            details = row.get('details')
+            details = row.get('details').replace("'", '"')
+            details = json.loads(details)
         if count >= 0:
             row_aggregate.append({"client_yaya_account": row.get('client_yaya_account'), "customer_yaya_account": row.get('customer_yaya_account'), "amount": row.get('amount'), "start_at": row.get('start_at'), "due_at": row.get('due_at'), "customer_id": row.get('customer_id'), "bill_id": row.get('bill_id'), "bill_code": row.get('bill_code'), "bill_season": row.get('bill_season'), "cluster": row.get('cluster'), "description": row.get('description'), "phone": row.get('phone '), "email": row.get('email'), "details": details})
             row_aggregate_with_id.append({"uuid": row.get("uuid"), "client_yaya_account": row.get('client_yaya_account'), "customer_yaya_account": row.get('customer_yaya_account'), "amount": row.get('amount'), "start_at": row.get('start_at'), "due_at": row.get('due_at'), "customer_id": row.get('customer_id'), "bill_id": row.get('bill_id'), "bill_code": row.get('bill_code'), "bill_season": row.get('bill_season'), "cluster": row.get('cluster'), "description": row.get('description'), "phone": row.get('phone '), "email": row.get('email'), "details": details})
-            if (count + 1) % 10 == 0 or count + 1 == len(dep):
+            if (count + 1) % 10 == 0 or count + 1 == len(dep)%10:
                 resp = await bill_bulk_upload(row_aggregate)
                 if resp.status_code == 200 or resp.status_code == 201:
                     for bulk_row in row_aggregate_with_id:
