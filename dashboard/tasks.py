@@ -356,10 +356,8 @@ async def import_bill_rows(self: celery.Task, data, id):
     for row in dep:
         details = {}
         if row.get('details') != "" and row.get("details") != None:
-            details = row.get('details')
-            if isinstance(details, str):
-                details = details.replace("'", '"')
-                details = json.loads(details)
+            details = row.get('details').replace("'", '"')
+            details = json.loads(details)
         if count >= 0:
             row_aggregate.append({"client_yaya_account": row.get('client_yaya_account'), "customer_yaya_account": row.get('customer_yaya_account'), "amount": row.get('amount'), "start_at": row.get('start_at'), "due_at": row.get('due_at'), "customer_id": row.get('customer_id'), "bill_id": row.get('bill_id'), "bill_code": row.get('bill_code'), "bill_season": row.get('bill_season'), "cluster": row.get('cluster'), "description": row.get('description'), "phone": row.get('phone '), "email": row.get('email'), "details": details})
             row_aggregate_with_id.append({"uuid": row.get("uuid"), "client_yaya_account": row.get('client_yaya_account'), "customer_yaya_account": row.get('customer_yaya_account'), "amount": row.get('amount'), "start_at": row.get('start_at'), "due_at": row.get('due_at'), "customer_id": row.get('customer_id'), "bill_id": row.get('bill_id'), "bill_code": row.get('bill_code'), "bill_season": row.get('bill_season'), "cluster": row.get('cluster'), "description": row.get('description'), "phone": row.get('phone '), "email": row.get('email'), "details": details})
