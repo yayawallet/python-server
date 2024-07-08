@@ -298,6 +298,8 @@ async def import_bill_rows(self: celery.Task, data, id):
         'cluster', 'description', 'phone', 'email'
     ]
 
+    request_slice_count = 10
+
     for row in data:
         try:
             unix_timestamp_start = None
@@ -361,7 +363,7 @@ async def import_bill_rows(self: celery.Task, data, id):
         if count >= 0:
             row_aggregate.append({"client_yaya_account": row.get('client_yaya_account'), "customer_yaya_account": row.get('customer_yaya_account'), "amount": row.get('amount'), "start_at": row.get('start_at'), "due_at": row.get('due_at'), "customer_id": row.get('customer_id'), "bill_id": row.get('bill_id'), "bill_code": row.get('bill_code'), "bill_season": row.get('bill_season'), "cluster": row.get('cluster'), "description": row.get('description'), "phone": row.get('phone '), "email": row.get('email'), "details": details})
             row_aggregate_with_id.append({"uuid": row.get("uuid"), "client_yaya_account": row.get('client_yaya_account'), "customer_yaya_account": row.get('customer_yaya_account'), "amount": row.get('amount'), "start_at": row.get('start_at'), "due_at": row.get('due_at'), "customer_id": row.get('customer_id'), "bill_id": row.get('bill_id'), "bill_code": row.get('bill_code'), "bill_season": row.get('bill_season'), "cluster": row.get('cluster'), "description": row.get('description'), "phone": row.get('phone '), "email": row.get('email'), "details": details})
-            if (count + 1) % 10 == 0 or count + 1 == len(dep)%10:
+            if (count + 1) % request_slice_count == 0 or count + 1 == len(dep):
                 resp = await bill_bulk_upload(row_aggregate)
                 if resp.status_code == 200 or resp.status_code == 201:
                     for bulk_row in row_aggregate_with_id:
