@@ -1,5 +1,4 @@
 from adrf.decorators import api_view
-from rest_framework.response import Response
 from yayawallet_python_sdk.api import user
 from .stream_response import stream_response
 from ..permisssions.async_permission import async_permission_required

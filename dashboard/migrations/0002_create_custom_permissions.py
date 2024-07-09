@@ -129,8 +129,8 @@ def create_custom_permissions(apps, schema_editor):
     )
 
     Permission.objects.create(
-        codename='can_create_user',
-        name='Can Create User',
+        codename='create_user',
+        name='Create User',
         content_type=content_type,
     )
 
