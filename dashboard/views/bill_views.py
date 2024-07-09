@@ -96,11 +96,18 @@ async def proxy_update_bill(request):
     response = await bill.update_bill(
         data.get('client_yaya_account'), 
         data.get('customer_yaya_account'), 
-        data.get('amount'),  
+        data.get('amount'), 
+        data.get('start_at'), 
+        data.get('due_at'), 
         data.get('customer_id'),
         data.get('bill_id'),
+        data.get('bill_code'),
+        data.get('bill_season'),
+        data.get('cluster'),
+        data.get('description'),
         data.get('phone'),
         data.get('email'),
+        data.get('details')
         )
     return stream_response(response)
 
