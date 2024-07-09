@@ -128,6 +128,11 @@ def create_custom_permissions(apps, schema_editor):
         content_type=content_type,
     )
 
+    Permission.objects.create(
+        codename='can_create_user',
+        name='Can Create User',
+        content_type=content_type,
+    )
 
 class Migration(migrations.Migration):
 
