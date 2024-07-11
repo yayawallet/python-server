@@ -32,3 +32,8 @@ async def proxy_create_business_user(request):
     data = request.data
     response = await user.create_business_user(data)
     return stream_response(response)
+
+@api_view(['GET'])
+async def proxy_get_balance(request):
+    response = await user.get_balance()
+    return stream_response(response)

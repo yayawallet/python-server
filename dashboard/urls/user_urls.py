@@ -7,4 +7,5 @@ urlpatterns = [
     path('user/search', user_views.proxy_search_user, name='get-profile'),
     path('user/register', user_views.proxy_create_customer_user, name='create-customer'),
     path('user/register-business', user_views.proxy_create_business_user, name='create-business'),
+    path('user/balance', user_views.proxy_get_balance, name='get-balance'),
 ]

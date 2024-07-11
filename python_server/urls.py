@@ -14,6 +14,8 @@ urlpatterns = [
     path('', include('dashboard.urls.scheduled_urls')),
     path('', include('dashboard.urls.report_urls')),
     path('', include('dashboard.urls.bill_urls')),
+    path('', include('dashboard.urls.lookup_urls')),
+    path('', include('dashboard.urls.payout_urls')),
     path('', include('dashboard.urls.auth_urls')),
     path('admin', admin.site.urls),
 ]
