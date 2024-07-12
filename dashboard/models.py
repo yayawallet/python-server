@@ -68,7 +68,7 @@ class Scheduled(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                check=Q(recurring__in=['once', 'daily', 'weekly' 'monthly']),
+                check=Q(recurring__in=['once', 'daily', 'weekly', 'monthly']),
                 name='recurring_valid_values'
             ),
         ]

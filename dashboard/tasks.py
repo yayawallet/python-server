@@ -15,11 +15,17 @@ import math
 
 def process_date(start_at):
     if isinstance(start_at, datetime):
-        return start_at.strftime("%Y-%m-%d")
-    elif isinstance(start_at, str):
         return start_at
+    elif isinstance(start_at, str):
+        try:
+            return datetime.strptime(start_at, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            try:
+                return datetime.strptime(start_at, "%Y-%m-%d")
+            except ValueError:
+                return datetime(1970, 1, 1)
     else:
-        return "1970-01-01"
+        return datetime(1970, 1, 1)
     
 def process_meta_data(meta_data):
     empty_obj = {}
@@ -36,7 +42,7 @@ async def import_scheduled_rows(self: celery.Task, data, id):
     for row in data:
         try:
             processed_date = process_date(row.get('start_at'))
-            date_object = datetime.strptime(processed_date, "%Y-%m-%d")
+            date_object = datetime.strptime(processed_date, "%Y-%m-%d %H:%M:%S")
             unix_timestamp = int(date_object.timestamp())
             parsed_amount = 0
             if not math.isnan(row.get('amount')):
@@ -306,7 +312,7 @@ async def import_bill_rows(self: celery.Task, data, id):
             if row.get('start_at') != None:
                 processed_date_start = process_date(row.get('start_at'))
                 try:
-                    date_object_start = datetime.strptime(processed_date_start, "%Y-%m-%d")
+                    date_object_start = datetime.strptime(processed_date_start, "%Y-%m-%d %H:%M:%S")
                     unix_timestamp_due = int(date_object_start.timestamp())
                 except:
                     unix_timestamp_due = None
@@ -314,7 +320,7 @@ async def import_bill_rows(self: celery.Task, data, id):
             if row.get('due_at') != None:
                 processed_date_due = process_date(row.get('due_at'))
                 try:
-                    date_object_due = datetime.strptime(processed_date_due, "%Y-%m-%d")
+                    date_object_due = datetime.strptime(processed_date_due, "%Y-%m-%d %H:%M:%S")
                     unix_timestamp_due = int(date_object_due.timestamp())
                 except:
                     unix_timestamp_due = None
