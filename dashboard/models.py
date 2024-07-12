@@ -7,6 +7,13 @@ from django.db.models import Q
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    country = models.CharField(null=True, blank=True)
+    address = models.CharField(null=True, blank=True)
+    region = models.CharField(null=True, blank=True)
+    phone = models.CharField()
+    date_of_birth = models.DateField(null=True, blank=True)
+    profile_image = models.ImageField(upload_to='profile_images/', null=True, blank=True)
+    id_image = models.ImageField(upload_to='profile_images/', null=True, blank=True)
     api_key = models.CharField()
 
     def __str__(self):
