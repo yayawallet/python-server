@@ -134,6 +134,18 @@ def create_custom_permissions(apps, schema_editor):
         content_type=content_type,
     )
 
+    Permission.objects.create(
+        codename='create_payout',
+        name='Can Create Payout',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='create_bulk_payout',
+        name='Create Bulk Payout',
+        content_type=content_type,
+    )
+
 class Migration(migrations.Migration):
 
     dependencies = [

@@ -155,3 +155,21 @@ class Bill(models.Model):
     imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+class Payout(models.Model):
+    uuid = models.UUIDField( 
+         primary_key = True, 
+         default = uuid.uuid4, 
+         editable = False) 
+    row_number = models.IntegerField(null=True, blank=True)
+    client_yaya_account = models.CharField(null=True, blank=True)
+    cluster = models.CharField(null=True, blank=True)
+    bill_code = models.CharField(null=True, blank=True)
+    institution = models.CharField(null=True, blank=True)
+    account_number = models.CharField(null=True, blank=True)
+    details = models.CharField(null=True, blank=True)
+    json_object = models.CharField(null=True, blank=True)
+    uploaded = models.BooleanField(null=True, blank=True)
+    imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
