@@ -3,11 +3,11 @@ from __future__ import absolute_import, unicode_literals
 import celery
 from datetime import datetime
 from asgiref.sync import sync_to_async
-from .models import Scheduled, Contract, FailedImports, RecurringPaymentRequest, ImportedDocuments, Bill
-from yayawallet_python_sdk.api import scheduled, recurring_contract, bill
+from .models import Scheduled, Contract, FailedImports, RecurringPaymentRequest, ImportedDocuments, Bill, Payout
+from yayawallet_python_sdk.api import scheduled, recurring_contract, bill, payout
 from python_server.celery import app
 from .async_task import async_task
-from .serializers.serializers import ScheduledSerializer, ContractSerializer, RecurringPaymentRequestSerializer, FailedImportsSerializer, BillSerializer
+from .serializers.serializers import ScheduledSerializer, ContractSerializer, RecurringPaymentRequestSerializer, FailedImportsSerializer, BillSerializer, PayoutSerializer
 import json
 from django.shortcuts import get_object_or_404
 from .constants import ImportTypes
@@ -377,7 +377,11 @@ async def import_bill_rows(self: celery.Task, data, id):
                         bill_object.uploaded = True 
                         await sync_to_async(bill_object.save)()
                 else:
-                    print("An exception occurred, while saving bulk bill!!", error)
+                    content = ''
+                    for chunk in resp.streaming_content:
+                        if chunk:
+                            content += chunk.decode('utf-8')
+                    print("An exception occurred, while saving bulk bill!!", content)
 
                 row_aggregate = []
                 row_aggregate_with_id = []
@@ -400,4 +404,83 @@ async def bill_bulk_upload(data):
 
 def get_bill_serialized_data(db_results):
     serializer = BillSerializer(db_results, many=True)
+    return serializer.data
+
+@async_task(app, bind=True)
+async def import_payout_rows(self: celery.Task, data, id):
+    direct_fields = [
+        'row_number', 'client_yaya_account', 'cluster', 'bill_code',
+        'institution', 'account_number', 'details'
+    ]
+
+    request_slice_count = 10
+
+    for row in data:
+        try:
+            details_dict = {k: v for k, v in row.items() if k not in direct_fields}
+
+            instance = Payout(
+                row_number=row.get('row_number'), 
+                client_yaya_account=row.get('client_yaya_account'), 
+                cluster=row.get('cluster'), 
+                bill_code=row.get('bill_code'), 
+                institution=row.get('institution'), 
+                account_number=row.get('account_number'),  
+                details=details_dict, 
+                json_object=json.dumps(row, indent=4, sort_keys=True, default=str), 
+                uploaded=False
+            )
+            imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
+            instance.imported_document_id = imported_document
+            await sync_to_async(instance.save)()
+        except Exception as error:
+            print("An exception occurred, while importing payouts!!", error)
+    obj = await sync_to_async(Payout.objects.filter)(uploaded=False, imported_document_id=id)
+    dep= await sync_to_async(get_payout_serialized_data)(obj)
+    count = 0
+    row_aggregate = []
+    row_aggregate_with_id = []
+    for row in dep:
+        details = {}
+        if row.get('details') != "" and row.get("details") != None:
+            details = row.get('details').replace("'", '"')
+            details = json.loads(details)
+        if count >= 0:
+            row_aggregate.append({"client_yaya_account": row.get('client_yaya_account'), "cluster": row.get('cluster'), "bill_code": row.get('bill_code'), "institution": row.get('institution'), "account_number": row.get('account_number'), "details": details})
+            row_aggregate_with_id.append({"uuid": row.get("uuid"), "client_yaya_account": row.get('client_yaya_account'), "cluster": row.get('cluster'), "bill_code": row.get('bill_code'), "institution": row.get('institution'), "account_number": row.get('account_number'), "details": details})
+            if (count + 1) % request_slice_count == 0 or count + 1 == len(dep):
+                resp = await payout_bulk_upload(row_aggregate)
+                if resp.status_code == 200 or resp.status_code == 201:
+                    for bulk_row in row_aggregate_with_id:
+                        payout_object = await sync_to_async(get_object_or_404)(Payout, pk=bulk_row.get('uuid'))
+                        payout_object.uploaded = True 
+                        await sync_to_async(payout_object.save)()
+                else:
+                    content = ''
+                    for chunk in resp.streaming_content:
+                        if chunk:
+                            content += chunk.decode('utf-8')
+                    print("An exception occurred, while saving bulk payout!!", content)
+
+                row_aggregate = []
+                row_aggregate_with_id = []
+    
+        count = count + 1
+
+    uploaded_obj = await sync_to_async(Payout.objects.filter)(uploaded=True, imported_document_id=id)
+    uploaded = await sync_to_async(get_payout_serialized_data)(uploaded_obj)
+    on_queue_obj = await sync_to_async(Payout.objects.filter)(uploaded=False, imported_document_id=id)
+    on_queue = await sync_to_async(get_payout_serialized_data)(on_queue_obj)
+    imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
+    imported_document.successful_count = len(uploaded)
+    imported_document.on_queue_count = len(on_queue)
+    await sync_to_async(imported_document.save)()
+
+async def payout_bulk_upload(data):
+    print(data)
+    response = await payout.bulk_cluster_payout(data)
+    return response
+
+def get_payout_serialized_data(db_results):
+    serializer = PayoutSerializer(db_results, many=True)
     return serializer.data
