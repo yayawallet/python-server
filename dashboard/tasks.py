@@ -8,9 +8,11 @@ from yayawallet_python_sdk.api import scheduled, recurring_contract, bill, payou
 from python_server.celery import app
 from .async_task import async_task
 from .serializers.serializers import ScheduledSerializer, ContractSerializer, RecurringPaymentRequestSerializer, FailedImportsSerializer, BillSerializer, PayoutSerializer
+from .serializers.contract_serializers import ContractDataSerializer
 import json
 from django.shortcuts import get_object_or_404
 from .constants import ImportTypes
+from .exceptions.exceptions import SerializerInvalidException
 import math
 
 def process_date(start_at):
@@ -131,18 +133,24 @@ def get_scheduled_serialized_data(db_results):
 async def import_contract_rows(self: celery.Task, data, id):
     for row in data:
         try:
-            instance = Contract(
-                row_number=row.get('row_number'), 
-                contract_number=row.get('contract_number'), 
-                service_type=row.get('service_type'), 
-                customer_account_name=row.get('customer_account_name'), 
-                meta_data=json.dumps(row.get('meta_data'), indent=4, sort_keys=True, default=str), 
-                json_object=json.dumps(row, indent=4, sort_keys=True, default=str), 
-                uploaded=False
-            )
-            imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
-            instance.imported_document_id = imported_document
-            await sync_to_async(instance.save)()
+            serializer = ContractDataSerializer(data=row)
+
+            if serializer.is_valid():
+                validated_data = serializer.validated_data
+                instance = Contract(
+                    row_number=validated_data.get('row_number'), 
+                    contract_number=validated_data.get('contract_number'), 
+                    service_type=validated_data.get('service_type'), 
+                    customer_account_name=validated_data.get('customer_account_name'), 
+                    meta_data=json.dumps(validated_data.get('meta_data'), indent=4, sort_keys=True, default=str), 
+                    json_object=json.dumps(validated_data, indent=4, sort_keys=True, default=str), 
+                    uploaded=False
+                )
+                imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
+                instance.imported_document_id = imported_document
+                await sync_to_async(instance.save)()
+            else:
+                raise SerializerInvalidException(detail=serializer.errors)
         except Exception as error:
             print("An exception occurred, while importing contracts!!", error)
             try:
@@ -171,12 +179,12 @@ async def import_contract_rows(self: celery.Task, data, id):
                     for chunk in resp.streaming_content:
                         if chunk:
                             content += chunk.decode('utf-8')
-                    failed_instance = FailedImports(json_object=json.dumps(row, indent=4, sort_keys=True, default=str), error_message=content)    
+                    failed_instance = FailedImports(row_number=row.get('row_number'), json_object=json.dumps(row, indent=4, sort_keys=True, default=str), error_message=content)    
                     failed_imported_document = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
                     failed_instance.imported_document_id = failed_imported_document
                     await sync_to_async(failed_instance.save)()
                 except Exception as error:
-                    print("An exception occurred, while saving failed schedule!!", error)
+                    print("An exception occurred, while saving failed contract!!", error)
     
         count = count + 1
 

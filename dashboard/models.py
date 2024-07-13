@@ -96,9 +96,6 @@ class Contract(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        unique_together = ('contract_number', 'service_type',)
-
 class FailedImports(models.Model):
     uuid = models.UUIDField( 
          primary_key = True, 
