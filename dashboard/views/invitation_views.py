@@ -19,3 +19,14 @@ async def proxy_create_inivitation(request):
         data.get('amount')
         )
     return stream_response(response)
+
+@api_view(['POST'])
+async def proxy_verify_invitation(request):
+    data = request.data
+    response = await invitation.verify_invitation(data.get('invite_hash'))
+    return stream_response(response)
+
+@api_view(['DELETE'])
+async def proxy_cancel_invite(request, invite_hash):
+    response = await invitation.cancel_invite(invite_hash)
+    return stream_response(response)
