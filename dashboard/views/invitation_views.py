@@ -30,3 +30,13 @@ async def proxy_verify_invitation(request):
 async def proxy_cancel_invite(request, invite_hash):
     response = await invitation.cancel_invite(invite_hash)
     return stream_response(response)
+
+@api_view(['POST'])
+async def proxy_get_otp(request):
+    data = request.data
+    response = await invitation.get_otp(
+        data.get('country'),
+        data.get('phone'),
+        data.get('invite_hash')
+        )
+    return stream_response(response)
