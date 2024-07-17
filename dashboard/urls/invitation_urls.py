@@ -6,4 +6,5 @@ urlpatterns = [
     path('invitation/create', invitation_views.proxy_create_inivitation, name='create-invitation'),
     path('invitation/find-by-hash', invitation_views.proxy_verify_invitation, name='verify-invitation'),
     path('invitation/cancel/<str:invite_hash>', invitation_views.proxy_cancel_invite, name='cancel-invitation'),
+    path('invitation/otp', invitation_views.proxy_get_otp, name='get-otp'),
 ]
