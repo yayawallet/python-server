@@ -42,8 +42,7 @@ async def import_scheduled_rows(self: celery.Task, data, id):
     for row in data:
         try:
             processed_date = process_date(row.get('start_at'))
-            date_object = datetime.strptime(processed_date, "%Y-%m-%d %H:%M:%S")
-            unix_timestamp = int(date_object.timestamp())
+            unix_timestamp = int(processed_date.timestamp())
             parsed_amount = 0
             if not math.isnan(row.get('amount')):
                 parsed_amount = row.get('amount')
@@ -312,16 +311,14 @@ async def import_bill_rows(self: celery.Task, data, id):
             if row.get('start_at') != None:
                 processed_date_start = process_date(row.get('start_at'))
                 try:
-                    date_object_start = datetime.strptime(processed_date_start, "%Y-%m-%d %H:%M:%S")
-                    unix_timestamp_due = int(date_object_start.timestamp())
+                    unix_timestamp_due = int(processed_date_start.timestamp())
                 except:
                     unix_timestamp_due = None
             unix_timestamp_due = None
             if row.get('due_at') != None:
                 processed_date_due = process_date(row.get('due_at'))
                 try:
-                    date_object_due = datetime.strptime(processed_date_due, "%Y-%m-%d %H:%M:%S")
-                    unix_timestamp_due = int(date_object_due.timestamp())
+                    unix_timestamp_due = int(processed_date_due.timestamp())
                 except:
                     unix_timestamp_due = None
                 
