@@ -45,6 +45,12 @@ def create_custom_permissions(apps, schema_editor):
     )
 
     Permission.objects.create(
+        codename='get_invitation_otp',
+        name='Get Invitation OTP',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
         codename='create_contract',
         name='Create Contract',
         content_type=content_type,

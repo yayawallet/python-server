@@ -11,3 +11,21 @@ ImportTypes = {
   BILL: "Bill",
   PAYOUT: "PAYOUT",
 }
+
+TRANSACTION = "TRANSACTION"
+TRANSFER = "TRANSFER"
+AIRTIME = "AIRTIME"
+PACKAGE = "PACKAGE"
+BILL_ACTION= "BILL_ACTION"
+SCHEDULED_ACTION= "SCHEDULED_ACTION"
+CONTRACT_ACTION= "CONTRACT_ACTION"
+
+Actions = {
+  TRANSACTION: "Transaction on YaYa",
+  TRANSFER: "Transfer To Other Bank",
+  AIRTIME: "Airtime Purchase",
+  PACKAGE: "Package Purchase",
+  BILL_ACTION: "Bill Creation",
+  SCHEDULED_ACTION: "Scheduled Payment Creation",
+  CONTRACT_ACTION: "Contract Creation",
+}

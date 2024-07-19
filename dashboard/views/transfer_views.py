@@ -3,6 +3,10 @@ from rest_framework.response import Response
 from ..permisssions.async_permission import async_permission_required
 from yayawallet_python_sdk.api import transfer
 from .stream_response import stream_response
+from ..functions.common_functions import get_logged_in_user, parse_response
+from ..models import ActionTrail
+from asgiref.sync import sync_to_async
+from ..constants import Actions
 
 @api_view(['GET'])
 async def proxy_get_transfer_list(request):
@@ -21,6 +25,16 @@ async def proxy_transfer_as_user(request):
         data.get('sender_note'),
         data.get('phone')
         )
+    
+    if response.status_code == 200 or response.status_code == 201:
+        parsed_data = parse_response(response)
+        
+        instance = ActionTrail(
+            user_id=await sync_to_async(get_logged_in_user)(request), 
+            action_id=parsed_data.get('id'), 
+            action_type=Actions.get("TRANSFER")
+        )
+        await sync_to_async(instance.save)()
     return stream_response(response)
 
 @async_permission_required('auth.external_account_lookup', raise_exception=True)

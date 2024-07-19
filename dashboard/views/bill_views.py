@@ -12,6 +12,9 @@ from django.contrib.auth.models import User
 from ..constants import ImportTypes
 from django.http.response import JsonResponse
 from dashboard.tasks import import_bill_rows
+from ..functions.common_functions import get_logged_in_user, parse_response
+from ..models import ActionTrail
+from ..constants import Actions
 
 @async_permission_required('auth.create_bill', raise_exception=True)
 @api_view(['POST'])
@@ -33,6 +36,17 @@ async def proxy_create_bill(request):
         data.get('email'),
         data.get('details')
         )
+    
+    if response.status_code == 200 or response.status_code == 201:
+        parsed_data = parse_response(response)
+        
+        instance = ActionTrail(
+            user_id=await sync_to_async(get_logged_in_user)(request), 
+            action_id=parsed_data.get('id'), 
+            action_type=Actions.get("BILL_ACTION")
+        )
+        await sync_to_async(instance.save)()
+        
     return stream_response(response)
 
 @async_permission_required('auth.create_bulk_bill', raise_exception=True)

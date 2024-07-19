@@ -13,6 +13,9 @@ from dashboard.tasks import import_contract_rows, import_recurring_payment_reque
 from python_server.celery import app
 import jwt
 from django.contrib.auth.models import User
+from ..functions.common_functions import get_logged_in_user, parse_response
+from ..models import ActionTrail
+from ..constants import Actions
 
 @api_view(['GET'])
 async def proxy_list_all_contracts(request):
@@ -29,6 +32,17 @@ async def proxy_create_contract(request):
         data.get('customer_account_name'),
         data.get('meta_data')
         )
+    
+    if response.status_code == 200 or response.status_code == 201:
+        parsed_data = parse_response(response)
+        
+        instance = ActionTrail(
+            user_id=await sync_to_async(get_logged_in_user)(request), 
+            action_id=parsed_data.get('contract_id'), 
+            action_type=Actions.get("CONTRACT_ACTION")
+        )
+        await sync_to_async(instance.save)()
+
     return stream_response(response)
 
 @async_permission_required('auth.request_payment', raise_exception=True)
