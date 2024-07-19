@@ -7,6 +7,7 @@ dashboard/views/__pycache__
 dashboard/serializers/__pycache__
 dashboard/permissions/__pycache__
 dashboard/exceptions/__pycache__
+dashboard/functions/__pycache__
 
 #environment variable
 .env

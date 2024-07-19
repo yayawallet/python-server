@@ -12,6 +12,9 @@ from dashboard.tasks import import_scheduled_rows
 from ..constants import ImportTypes
 import jwt
 from django.contrib.auth.models import User
+from ..functions.common_functions import get_logged_in_user, parse_response
+from ..models import ActionTrail
+from ..constants import Actions
 
 @async_permission_required('auth.create_schedule', raise_exception=True)
 @api_view(['POST'])
@@ -25,6 +28,17 @@ async def proxy_create_schedule(request):
         data.get('start_at'), 
         data.get('meta_data')
         )
+    
+    if response.status_code == 200 or response.status_code == 201:
+        parsed_data = parse_response(response)
+        
+        instance = ActionTrail(
+            user_id=await sync_to_async(get_logged_in_user)(request), 
+            action_id=parsed_data.get('id'), 
+            action_type=Actions.get("SCHEDULED_ACTION")
+        )
+        await sync_to_async(instance.save)()
+        
     return stream_response(response)
 
 @api_view(['GET'])

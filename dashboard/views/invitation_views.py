@@ -31,6 +31,7 @@ async def proxy_cancel_invite(request, invite_hash):
     response = await invitation.cancel_invite(invite_hash)
     return stream_response(response)
 
+@async_permission_required('auth.get_otp', raise_exception=True)
 @api_view(['POST'])
 async def proxy_get_otp(request):
     data = request.data
