@@ -184,3 +184,13 @@ class ActionTrail(models.Model):
     action_type = models.CharField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+class BillSlice(models.Model):
+    uuid = models.UUIDField( 
+         primary_key = True, 
+         default = uuid.uuid4, 
+         editable = False) 
+    slice_upload_id = models.CharField()
+    imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

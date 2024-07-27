@@ -37,6 +37,7 @@ async def proxy_create_transaction(request):
             action_type=Actions.get("TRANSACTION")
         )
         await sync_to_async(instance.save)()
+        return JsonResponse(parsed_data, safe=False)
     return stream_response(response)
 
 @api_view(['POST'])

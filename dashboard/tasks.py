@@ -3,7 +3,7 @@ from __future__ import absolute_import, unicode_literals
 import celery
 from datetime import datetime
 from asgiref.sync import sync_to_async
-from .models import Scheduled, Contract, FailedImports, RecurringPaymentRequest, ImportedDocuments, Bill, Payout
+from .models import Scheduled, Contract, FailedImports, RecurringPaymentRequest, ImportedDocuments, Bill, Payout, BillSlice
 from yayawallet_python_sdk.api import scheduled, recurring_contract, bill, payout
 from python_server.celery import app
 from .async_task import async_task
@@ -12,6 +12,7 @@ import json
 from django.shortcuts import get_object_or_404
 from .constants import ImportTypes
 import math
+from .functions.common_functions import parse_response
 
 def process_date(start_at):
     if isinstance(start_at, datetime):
@@ -369,6 +370,13 @@ async def import_bill_rows(self: celery.Task, data, id):
             if (count + 1) % request_slice_count == 0 or count + 1 == len(dep):
                 resp = await bill_bulk_upload(row_aggregate)
                 if resp.status_code == 200 or resp.status_code == 201:
+                    parsed_content = parse_response(resp)
+                    imported_document_slice = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
+                    bill_slice_instance = BillSlice(
+                        slice_upload_id=parsed_content.get('id'), 
+                        imported_document_id=imported_document_slice, 
+                    )
+                    await sync_to_async(bill_slice_instance.save)()
                     for bulk_row in row_aggregate_with_id:
                         bill_object = await sync_to_async(get_object_or_404)(Bill, pk=bulk_row.get('uuid'))
                         bill_object.uploaded = True 
