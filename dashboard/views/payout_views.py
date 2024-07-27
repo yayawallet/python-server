@@ -71,7 +71,11 @@ async def proxy_bulk_cluster_payout(request):
 @api_view(['POST'])
 async def proxy_get_payout(request):
     data = request.data
-    response = await payout.get_payout(data)
+    page = request.GET.get('p')
+    if not page:
+        page = "1"
+    params = "?p=" + page
+    response = await payout.get_payout(params, data)
     return stream_response(response)
 
 @api_view(['DELETE'])

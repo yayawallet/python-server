@@ -38,12 +38,17 @@ async def proxy_create_schedule(request):
             action_type=Actions.get("SCHEDULED_ACTION")
         )
         await sync_to_async(instance.save)()
+        return JsonResponse(parsed_data, safe=False)
         
     return stream_response(response)
 
 @api_view(['GET'])
 async def proxy_schedule_list(request):
-    response = await scheduled.get_list()
+    page = request.GET.get('p')
+    if not page:
+        page = "1"
+    params = "?p=" + page
+    response = await scheduled.get_list(params)
     return stream_response(response)
 
 @api_view(['GET'])

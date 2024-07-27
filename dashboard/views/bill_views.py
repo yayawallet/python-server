@@ -12,9 +12,10 @@ from django.contrib.auth.models import User
 from ..constants import ImportTypes
 from django.http.response import JsonResponse
 from dashboard.tasks import import_bill_rows
-from ..functions.common_functions import get_logged_in_user, parse_response
-from ..models import ActionTrail
+from ..functions.common_functions import get_logged_in_user, parse_response, get_dict_by_property_value
+from ..models import ActionTrail, BillSlice
 from ..constants import Actions
+from django.contrib.postgres.aggregates import ArrayAgg
 
 @async_permission_required('auth.create_bill', raise_exception=True)
 @api_view(['POST'])
@@ -46,6 +47,7 @@ async def proxy_create_bill(request):
             action_type=Actions.get("BILL_ACTION")
         )
         await sync_to_async(instance.save)()
+        return JsonResponse(parsed_data, safe=False)
         
     return stream_response(response)
 
@@ -100,8 +102,41 @@ async def proxy_create_bulk_bill(request):
 
 @api_view(['GET'])
 async def proxy_bulk_bill_status(request):
-    response = await bill.bulk_bill_status()
-    return stream_response(response)
+    page = request.GET.get('p')
+    if not page:
+        page = "1"
+    params = "?p=" + page
+    response = await bill.bulk_bill_status(params)
+    parsed_content = parse_response(response)
+    result = await sync_to_async(
+        lambda: list(
+            BillSlice.objects.values('imported_document_id').annotate(
+                slice_upload_ids=ArrayAgg('slice_upload_id')
+            )
+        )
+    )()
+    merged_response = []
+    for item in result:
+        imported_document_id = item['imported_document_id']
+        slice_upload_ids = item['slice_upload_ids']
+        document_report = {
+            "id": imported_document_id,
+            "failed_records": 0,
+            "imported_records": 0,
+            "submitted_records": 0,
+            "status": "DONE",
+            "createdAt": "",
+        }
+        for id in slice_upload_ids:
+            slice_report = get_dict_by_property_value(parsed_content.get("data"), "id", id)
+            document_report['failed_records'] = document_report['failed_records'] + slice_report['failed_records']
+            document_report['imported_records'] = document_report['imported_records'] + slice_report['imported_records']
+            document_report['submitted_records'] = document_report['submitted_records'] + slice_report['submitted_records']
+            document_report['createdAt'] = slice_report['createdAt']
+
+        merged_response.append(document_report)
+
+    return JsonResponse(merged_response, safe=False)
 
 @async_permission_required('auth.update_bill', raise_exception=True)
 @api_view(['POST'])

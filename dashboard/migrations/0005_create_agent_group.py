@@ -9,8 +9,12 @@ def create_group(apps, schema_editor):
     group, _ = Group.objects.get_or_create(name="Agent")
 
     create_user = Permission.objects.get(codename="create_user")
+    create_invitation = Permission.objects.get(codename="create_invitation")
+    get_invitation_otp = Permission.objects.get(codename="get_invitation_otp")
 
     group.permissions.add(create_user)
+    group.permissions.add(create_invitation)
+    group.permissions.add(get_invitation_otp)
     group.save()
 
 class Migration(migrations.Migration):

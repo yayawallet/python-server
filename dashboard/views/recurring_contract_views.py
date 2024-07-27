@@ -32,7 +32,6 @@ async def proxy_create_contract(request):
         data.get('customer_account_name'),
         data.get('meta_data')
         )
-    
     if response.status_code == 200 or response.status_code == 201:
         parsed_data = parse_response(response)
         
@@ -42,6 +41,8 @@ async def proxy_create_contract(request):
             action_type=Actions.get("CONTRACT_ACTION")
         )
         await sync_to_async(instance.save)()
+        return JsonResponse(parsed_data, safe=False)
+    
 
     return stream_response(response)
 

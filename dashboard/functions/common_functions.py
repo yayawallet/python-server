@@ -22,3 +22,9 @@ def parse_response(response):
       parsed_data = None
 
   return parsed_data
+
+def get_dict_by_property_value(data, property_name, value):
+    for item in data:
+        if item.get(property_name) == value:
+            return item
+    return None
