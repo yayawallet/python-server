@@ -13,24 +13,27 @@ from dashboard.tasks import import_contract_rows, import_recurring_payment_reque
 from python_server.celery import app
 import jwt
 from django.contrib.auth.models import User
-from ..functions.common_functions import get_logged_in_user, parse_response
+from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile
 from ..models import ActionTrail
 from ..constants import Actions
 
 @api_view(['GET'])
 async def proxy_list_all_contracts(request):
-    response = await recurring_contract.list_all_contracts()
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
+    response = await recurring_contract.list_all_contracts(logged_in_user.api_key)
     return stream_response(response)
 
 @async_permission_required('auth.create_contract', raise_exception=True)
 @api_view(['POST'])
 async def proxy_create_contract(request):
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     data = request.data
     response = await recurring_contract.create_contract(
         data.get('contract_number'),
         data.get('service_type'),
         data.get('customer_account_name'),
-        data.get('meta_data')
+        data.get('meta_data'),
+        logged_in_user.api_key
         )
     if response.status_code == 200 or response.status_code == 201:
         parsed_data = parse_response(response)
@@ -49,6 +52,7 @@ async def proxy_create_contract(request):
 @async_permission_required('auth.request_payment', raise_exception=True)
 @api_view(['POST'])
 async def proxy_request_payment(request):
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     data = request.data
     response = await recurring_contract.request_payment(
         data.get('contract_number'),
@@ -56,43 +60,51 @@ async def proxy_request_payment(request):
         data.get('currency'),
         data.get('cause'),
         data.get('notification_url'),
-        data.get('meta_data') 
+        data.get('meta_data'),
+        logged_in_user.api_key
         )
     return stream_response(response)
 
 @api_view(['GET'])
 async def proxy_get_subscriptions(request):
-    response = await recurring_contract.get_subscriptions()
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
+    response = await recurring_contract.get_subscriptions(logged_in_user.api_key)
     return stream_response(response)
 
 @api_view(['GET'])
 async def proxy_get_list_of_payment_requests(request):
-    response = await recurring_contract.get_list_of_payment_requests()
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
+    response = await recurring_contract.get_list_of_payment_requests(logged_in_user.api_key)
     return stream_response(response)
 
 @api_view(['GET'])
 async def proxy_approve_payment_request(request, id):
-    response = await recurring_contract.approve_payment_request(id)
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
+    response = await recurring_contract.approve_payment_request(id, logged_in_user.api_key)
     return stream_response(response)
 
 @api_view(['GET'])
 async def proxy_reject_payment_request(request, id):
-    response = await recurring_contract.reject_payment_request(id)
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
+    response = await recurring_contract.reject_payment_request(id, logged_in_user.api_key)
     return stream_response(response)
 
 @api_view(['GET'])
 async def proxy_activate_subscription(request, id):
-    response = await recurring_contract.activate_subscription(id)
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
+    response = await recurring_contract.activate_subscription(id, logged_in_user.api_key)
     return stream_response(response)
 
 @api_view(['GET'])
 async def proxy_deactivate_subscription(request, id):
-    response = await recurring_contract.deactivate_subscription(id)
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
+    response = await recurring_contract.deactivate_subscription(id, logged_in_user.api_key)
     return stream_response(response)
 
 @async_permission_required('auth.bulk_import_contract', raise_exception=True)
 @api_view(['POST'])
 async def bulk_contract_import(request):
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     uploaded_file = request.FILES.get('file')
     if not uploaded_file:
         return HttpResponseBadRequest("No file uploaded.")
@@ -135,7 +147,7 @@ async def bulk_contract_import(request):
     )    
     await sync_to_async(instance.save)()
     saved_id = instance.uuid
-    import_contract_rows.delay(data, saved_id)
+    import_contract_rows.delay(data, saved_id, logged_in_user.api_key)
 
     return JsonResponse({"message": "Contract Requests Import in Progress!!"}, safe=False)
 
@@ -146,6 +158,7 @@ def serialize_failed_contracts(failed_contracts):
 @async_permission_required('auth.bulk_import_request_payment', raise_exception=True)
 @api_view(['POST'])
 async def bulk_recurring_payment_request_import(request):
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     uploaded_file = request.FILES.get('file')
     if not uploaded_file:
         return HttpResponseBadRequest("No file uploaded.")
@@ -188,6 +201,6 @@ async def bulk_recurring_payment_request_import(request):
     )    
     await sync_to_async(instance.save)()
     saved_id = instance.uuid
-    import_recurring_payment_request_rows.delay(data, saved_id)
+    import_recurring_payment_request_rows.delay(data, saved_id, logged_in_user.api_key)
 
     return JsonResponse({"message": "Recurring Payment Requests Import in Progress!!"}, safe=False)

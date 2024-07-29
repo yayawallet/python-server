@@ -5,6 +5,7 @@ from ..constants import ImportTypes
 from asgiref.sync import sync_to_async
 from django.http.response import JsonResponse
 import jwt
+from ..functions.common_functions import get_logged_in_user_profile
 
 def get_imported_documents_serialized_data(db_results):
     serializer = ImportedDocumentsSerializer(db_results, many=True)

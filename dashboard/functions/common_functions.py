@@ -1,6 +1,6 @@
 import jwt
 import json
-from ..models import User
+from ..models import User, UserProfile
 
 def get_logged_in_user(request):
   auth_header = request.headers.get('Authorization')
@@ -8,6 +8,13 @@ def get_logged_in_user(request):
   decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
   logged_in_user = User.objects.get(id=decoded_token.get("user_id"))
   return logged_in_user
+
+def get_logged_in_user_profile(request):
+  auth_header = request.headers.get('Authorization')
+  token = auth_header.split(' ')[1]
+  decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
+  logged_in_user_profile = UserProfile.objects.get(user_id=decoded_token.get("user_id"))
+  return logged_in_user_profile
 
 def parse_response(response):
   content = ''

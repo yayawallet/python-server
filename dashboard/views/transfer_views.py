@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from ..permisssions.async_permission import async_permission_required
 from yayawallet_python_sdk.api import transfer
 from .stream_response import stream_response
-from ..functions.common_functions import get_logged_in_user, parse_response
+from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile
 from ..models import ActionTrail
 from asgiref.sync import sync_to_async
 from ..constants import Actions
@@ -11,16 +11,18 @@ from django.http.response import JsonResponse
 
 @api_view(['GET'])
 async def proxy_get_transfer_list(request):
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     page = request.GET.get('p')
     if not page:
         page = "1"
     params = "?p=" + page
-    response = await transfer.get_transfer_list(params)
+    response = await transfer.get_transfer_list(params, logged_in_user.api_key)
     return stream_response(response)
 
 @async_permission_required('auth.transfer_as_user', raise_exception=True)
 @api_view(['POST'])
 async def proxy_transfer_as_user(request):
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     data = request.data
     response = await transfer.transfer_as_user(
         data.get('institution_code'), 
@@ -28,7 +30,8 @@ async def proxy_transfer_as_user(request):
         data.get('amount'),
         data.get('ref_code'),
         data.get('sender_note'),
-        data.get('phone')
+        data.get('phone'),
+        logged_in_user.api_key
         )
     
     if response.status_code == 200 or response.status_code == 201:
@@ -46,18 +49,22 @@ async def proxy_transfer_as_user(request):
 @async_permission_required('auth.external_account_lookup', raise_exception=True)
 @api_view(['POST'])
 async def proxy_external_account_lookup(request):
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     data = request.data
     response = await transfer.external_account_lookup(
         data.get('institution_code'), 
-        data.get('account_number')
+        data.get('account_number'),
+        logged_in_user.api_key
         )
     return stream_response(response)
 
 @api_view(['POST'])
 async def proxy_get_transfer_fee(request):
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     data = request.data
     response = await transfer.get_transfer_fee(
         data.get('institution_code'), 
-        data.get('amount')
+        data.get('amount'),
+        logged_in_user.api_key
         )
     return stream_response(response)
