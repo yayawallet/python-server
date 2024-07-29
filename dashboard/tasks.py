@@ -12,7 +12,7 @@ import json
 from django.shortcuts import get_object_or_404
 from .constants import ImportTypes
 import math
-from .functions.common_functions import parse_response
+from .functions.common_functions import parse_response, get_logged_in_user_profile
 
 def process_date(start_at):
     if isinstance(start_at, datetime):
@@ -39,7 +39,7 @@ def process_meta_data(meta_data):
         return empty_obj
 
 @async_task(app, bind=True)
-async def import_scheduled_rows(self: celery.Task, data, id):
+async def import_scheduled_rows(self: celery.Task, data, id, api_key):
     for row in data:
         try:
             processed_date = process_date(row.get('start_at'))
@@ -78,7 +78,7 @@ async def import_scheduled_rows(self: celery.Task, data, id):
         if row.get('meta_data') != "" and row.get("meta_data") != None:
             meta_data = json.loads(row.get('meta_data'))
         if count >= 0:
-            resp = await scheduled_row_upload({"account_number": row.get('account_number'), "amount": row.get('amount'), "reason": row.get('reason'), "recurring": row.get('recurring'), "start_at": row.get('start_at'), "meta_data": meta_data})
+            resp = await scheduled_row_upload({"account_number": row.get('account_number'), "amount": row.get('amount'), "reason": row.get('reason'), "recurring": row.get('recurring'), "start_at": row.get('start_at'), "meta_data": meta_data}, api_key)
             if resp.status_code == 200 or resp.status_code == 201:
                 scheduled_object = await sync_to_async(get_object_or_404)(Scheduled, pk=row.get('uuid'))
                 scheduled_object.uploaded = True
@@ -112,14 +112,15 @@ async def import_scheduled_rows(self: celery.Task, data, id):
     await sync_to_async(imported_document.save)()
 
 
-async def scheduled_row_upload(data):
+async def scheduled_row_upload(data, api_key):
     response = await scheduled.create(
         data.get('account_number'), 
         data.get('amount'), 
         data.get('reason'), 
         data.get('recurring'), 
         data.get('start_at'), 
-        process_meta_data(data.get('meta_data'))
+        process_meta_data(data.get('meta_data')),
+        api_key
         )
     return response
 
@@ -128,7 +129,7 @@ def get_scheduled_serialized_data(db_results):
     return serializer.data
 
 @async_task(app, bind=True)
-async def import_contract_rows(self: celery.Task, data, id):
+async def import_contract_rows(self: celery.Task, data, id, api_key):
     for row in data:
         try:
             instance = Contract(
@@ -160,7 +161,7 @@ async def import_contract_rows(self: celery.Task, data, id):
         if row.get('meta_data') != "" and row.get("meta_data") != None:
             meta_data = json.loads(row.get('meta_data'))
         if count >= 0:
-            resp = await contract_row_upload({"contract_number": row.get('contract_number'), "service_type": row.get('service_type'), "customer_account_name": row.get('customer_account_name'), "meta_data": meta_data})
+            resp = await contract_row_upload({"contract_number": row.get('contract_number'), "service_type": row.get('service_type'), "customer_account_name": row.get('customer_account_name'), "meta_data": meta_data}, api_key)
             if resp.status_code == 200 or resp.status_code == 201:
                 contract_object = await sync_to_async(get_object_or_404)(Contract, pk=row.get('uuid'))
                 contract_object.uploaded = True
@@ -193,12 +194,13 @@ async def import_contract_rows(self: celery.Task, data, id):
     await sync_to_async(imported_document.save)()
 
 
-async def contract_row_upload(data):
+async def contract_row_upload(data, api_key):
     response = await recurring_contract.create_contract(
         data.get('contract_number'), 
         data.get('service_type'), 
         data.get('customer_account_name'), 
-        data.get('meta_data')
+        data.get('meta_data'),
+        api_key
         )
     return response
 
@@ -207,7 +209,7 @@ def get_contract_serialized_data(db_results):
     return serializer.data
 
 @async_task(app, bind=True)
-async def import_recurring_payment_request_rows(self: celery.Task, data, id):
+async def import_recurring_payment_request_rows(self: celery.Task, data, id, api_key):
     for row in data:
         try:
             parsed_amount = 0
@@ -244,7 +246,7 @@ async def import_recurring_payment_request_rows(self: celery.Task, data, id):
         if row.get('meta_data') != "" and row.get("meta_data") != None:
             meta_data = json.loads(row.get('meta_data'))
         if count >= 0:
-            resp = await recurring_payment_request_row_upload({"contract_number": row.get('contract_number'), "amount": row.get('amount'), "currency": row.get('currency'), "cause": row.get('cause'), "notification_url": row.get('notification_url'), "meta_data": meta_data})
+            resp = await recurring_payment_request_row_upload({"contract_number": row.get('contract_number'), "amount": row.get('amount'), "currency": row.get('currency'), "cause": row.get('cause'), "notification_url": row.get('notification_url'), "meta_data": meta_data}, api_key)
             if resp.status_code == 200 or resp.status_code == 201:
                 recurring_payment_request_object = await sync_to_async(get_object_or_404)(RecurringPaymentRequest, pk=row.get('uuid'))
                 recurring_payment_request_object.uploaded = True
@@ -277,14 +279,15 @@ async def import_recurring_payment_request_rows(self: celery.Task, data, id):
     await sync_to_async(imported_document.save)()
 
 
-async def recurring_payment_request_row_upload(data):
+async def recurring_payment_request_row_upload(data, api_key):
     response = await recurring_contract.request_payment(
         data.get('contract_number'), 
         data.get('amount'), 
         data.get('currency'), 
         data.get('cause'), 
         data.get('start_at'), 
-        data.get('notification_url')
+        data.get('notification_url'),
+        api_key
         )
     return response
 
@@ -297,7 +300,7 @@ def get_failed_imports_serialized_data(db_results):
     return serializer.data
 
 @async_task(app, bind=True)
-async def import_bill_rows(self: celery.Task, data, id):
+async def import_bill_rows(self: celery.Task, data, id, api_key):
     direct_fields = [
         'row_number', 'client_yaya_account', 'customer_yaya_account', 'amount',
         'start_at', 'due_at', 'customer_id', 'bill_id', 'bill_code', 'bill_season',
@@ -368,7 +371,7 @@ async def import_bill_rows(self: celery.Task, data, id):
             row_aggregate.append({"client_yaya_account": row.get('client_yaya_account'), "customer_yaya_account": row.get('customer_yaya_account'), "amount": row.get('amount'), "start_at": row.get('start_at'), "due_at": row.get('due_at'), "customer_id": row.get('customer_id'), "bill_id": row.get('bill_id'), "bill_code": row.get('bill_code'), "bill_season": row.get('bill_season'), "cluster": row.get('cluster'), "description": row.get('description'), "phone": row.get('phone '), "email": row.get('email'), "details": details})
             row_aggregate_with_id.append({"uuid": row.get("uuid"), "client_yaya_account": row.get('client_yaya_account'), "customer_yaya_account": row.get('customer_yaya_account'), "amount": row.get('amount'), "start_at": row.get('start_at'), "due_at": row.get('due_at'), "customer_id": row.get('customer_id'), "bill_id": row.get('bill_id'), "bill_code": row.get('bill_code'), "bill_season": row.get('bill_season'), "cluster": row.get('cluster'), "description": row.get('description'), "phone": row.get('phone '), "email": row.get('email'), "details": details})
             if (count + 1) % request_slice_count == 0 or count + 1 == len(dep):
-                resp = await bill_bulk_upload(row_aggregate)
+                resp = await bill_bulk_upload(row_aggregate, api_key)
                 if resp.status_code == 200 or resp.status_code == 201:
                     parsed_content = parse_response(resp)
                     imported_document_slice = await sync_to_async(ImportedDocuments.objects.get)(pk=id)
@@ -403,8 +406,8 @@ async def import_bill_rows(self: celery.Task, data, id):
     await sync_to_async(imported_document.save)()
 
 
-async def bill_bulk_upload(data):
-    response = await bill.create_bulk_bill(data)
+async def bill_bulk_upload(data, api_key):
+    response = await bill.create_bulk_bill(data, api_key)
     return response
 
 def get_bill_serialized_data(db_results):
@@ -412,7 +415,7 @@ def get_bill_serialized_data(db_results):
     return serializer.data
 
 @async_task(app, bind=True)
-async def import_payout_rows(self: celery.Task, data, id):
+async def import_payout_rows(self: celery.Task, data, id, api_key):
     direct_fields = [
         'row_number', 'client_yaya_account', 'cluster', 'bill_code',
         'institution', 'account_number', 'details'
@@ -454,7 +457,7 @@ async def import_payout_rows(self: celery.Task, data, id):
             row_aggregate.append({"client_yaya_account": row.get('client_yaya_account'), "cluster": row.get('cluster'), "bill_code": row.get('bill_code'), "institution": row.get('institution'), "account_number": row.get('account_number'), "details": details})
             row_aggregate_with_id.append({"uuid": row.get("uuid"), "client_yaya_account": row.get('client_yaya_account'), "cluster": row.get('cluster'), "bill_code": row.get('bill_code'), "institution": row.get('institution'), "account_number": row.get('account_number'), "details": details})
             if (count + 1) % request_slice_count == 0 or count + 1 == len(dep):
-                resp = await payout_bulk_upload(row_aggregate)
+                resp = await payout_bulk_upload(row_aggregate, api_key)
                 if resp.status_code == 200 or resp.status_code == 201:
                     for bulk_row in row_aggregate_with_id:
                         payout_object = await sync_to_async(get_object_or_404)(Payout, pk=bulk_row.get('uuid'))
@@ -481,9 +484,8 @@ async def import_payout_rows(self: celery.Task, data, id):
     imported_document.on_queue_count = len(on_queue)
     await sync_to_async(imported_document.save)()
 
-async def payout_bulk_upload(data):
-    print(data)
-    response = await payout.bulk_cluster_payout(data)
+async def payout_bulk_upload(data, api_key):
+    response = await payout.bulk_cluster_payout(data, api_key)
     return response
 
 def get_payout_serialized_data(db_results):

@@ -11,17 +11,20 @@ from asgiref.sync import sync_to_async
 from ..constants import ImportTypes
 from ..permisssions.async_permission import async_permission_required
 from dashboard.tasks import import_payout_rows
+from ..functions.common_functions import get_logged_in_user_profile
 
 @async_permission_required('auth.create_payout', raise_exception=True)
 @api_view(['POST'])
 async def proxy_cluster_payout(request):
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     data = request.data
-    response = await payout.cluster_payout(data)
+    response = await payout.cluster_payout(data, logged_in_user.api_key)
     return stream_response(response)
 
 @async_permission_required('auth.create_bulk_payout', raise_exception=True)
 @api_view(['POST'])
 async def proxy_bulk_cluster_payout(request):
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     uploaded_file = request.FILES.get('file')
     if not uploaded_file:
         return HttpResponseBadRequest("No file uploaded.")
@@ -64,21 +67,23 @@ async def proxy_bulk_cluster_payout(request):
     )
     await sync_to_async(instance.save)()
     saved_id = instance.uuid
-    import_payout_rows.delay(data, saved_id)
+    import_payout_rows.delay(data, saved_id, logged_in_user.api_key)
 
     return JsonResponse({"message": "Payout Import in Progress!!"}, safe=False)
 
 @api_view(['POST'])
 async def proxy_get_payout(request):
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     data = request.data
     page = request.GET.get('p')
     if not page:
         page = "1"
     params = "?p=" + page
-    response = await payout.get_payout(params, data)
+    response = await payout.get_payout(params, data, logged_in_user.api_key)
     return stream_response(response)
 
 @api_view(['DELETE'])
 async def proxy_delete_payout(request, id):
-    response = await payout.delete_payout(id)
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
+    response = await payout.delete_payout(id, logged_in_user.api_key)
     return stream_response(response)

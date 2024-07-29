@@ -12,13 +12,14 @@ from dashboard.tasks import import_scheduled_rows
 from ..constants import ImportTypes
 import jwt
 from django.contrib.auth.models import User
-from ..functions.common_functions import get_logged_in_user, parse_response
+from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile
 from ..models import ActionTrail
 from ..constants import Actions
 
 @async_permission_required('auth.create_schedule', raise_exception=True)
 @api_view(['POST'])
 async def proxy_create_schedule(request):
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     data = request.data
     response = await scheduled.create(
         data.get('account_number'), 
@@ -26,7 +27,8 @@ async def proxy_create_schedule(request):
         data.get('reason'), 
         data.get('recurring'), 
         data.get('start_at'), 
-        data.get('meta_data')
+        data.get('meta_data'),
+        logged_in_user.api_key
         )
     
     if response.status_code == 200 or response.status_code == 201:
@@ -44,21 +46,24 @@ async def proxy_create_schedule(request):
 
 @api_view(['GET'])
 async def proxy_schedule_list(request):
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     page = request.GET.get('p')
     if not page:
         page = "1"
     params = "?p=" + page
-    response = await scheduled.get_list(params)
+    response = await scheduled.get_list(params, logged_in_user.api_key)
     return stream_response(response)
 
 @api_view(['GET'])
 async def proxy_archive_schedule(request, id):
-    response = await scheduled.archive(id)
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
+    response = await scheduled.archive(id, logged_in_user.api_key)
     return stream_response(response)
     
 @async_permission_required('auth.bulk_schedule_import', raise_exception=True)
 @api_view(['POST'])
 async def bulk_schedule_import(request):
+    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     uploaded_file = request.FILES.get('file')
     if not uploaded_file:
         return HttpResponseBadRequest("No file uploaded.")
@@ -101,6 +106,6 @@ async def bulk_schedule_import(request):
     )
     await sync_to_async(instance.save)()
     saved_id = instance.uuid
-    import_scheduled_rows.delay(data, saved_id)
+    import_scheduled_rows.delay(data, saved_id, logged_in_user.api_key)
 
     return JsonResponse({"message": "Scheduled Payments Import in Progress!!"}, safe=False)
