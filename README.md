@@ -16,6 +16,7 @@ DJANGO_SUPERUSER_PASSWORD={SUPERUSER_PASSWORD}
 {user2_api_key}_YAYA_API_SECRET={user2_api_secret}
 ...more user secret keys, if available
 ```
+NOTE: The user api keys should not have a hyphen in the name, so you should replace all hyphens with underscore. For example, 'key-test_b4ra65rr-s4q0' should be 'key_test_b4ra65rr_s4q0'.
 
 # How to run it?
 The project is dockerized, so you can simply run it by running the following command in the terminal:
