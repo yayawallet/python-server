@@ -24,7 +24,7 @@ async def proxy_cluster_payout(request):
 @async_permission_required('auth.create_bulk_payout', raise_exception=True)
 @api_view(['POST'])
 async def proxy_bulk_cluster_payout(request):
-    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile)(request)
     uploaded_file = request.FILES.get('file')
     if not uploaded_file:
         return HttpResponseBadRequest("No file uploaded.")
@@ -67,7 +67,7 @@ async def proxy_bulk_cluster_payout(request):
     )
     await sync_to_async(instance.save)()
     saved_id = instance.uuid
-    import_payout_rows.delay(data, saved_id, logged_in_user.api_key)
+    import_payout_rows.delay(data, saved_id, logged_in_user_profile.api_key)
 
     return JsonResponse({"message": "Payout Import in Progress!!"}, safe=False)
 

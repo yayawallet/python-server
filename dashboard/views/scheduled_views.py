@@ -63,7 +63,7 @@ async def proxy_archive_schedule(request, id):
 @async_permission_required('auth.bulk_schedule_import', raise_exception=True)
 @api_view(['POST'])
 async def bulk_schedule_import(request):
-    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile)(request)
     uploaded_file = request.FILES.get('file')
     if not uploaded_file:
         return HttpResponseBadRequest("No file uploaded.")
@@ -106,6 +106,6 @@ async def bulk_schedule_import(request):
     )
     await sync_to_async(instance.save)()
     saved_id = instance.uuid
-    import_scheduled_rows.delay(data, saved_id, logged_in_user.api_key)
+    import_scheduled_rows.delay(data, saved_id, logged_in_user_profile.api_key)
 
     return JsonResponse({"message": "Scheduled Payments Import in Progress!!"}, safe=False)
