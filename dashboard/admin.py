@@ -47,7 +47,7 @@ class AccountsUserAdmin(AuthUserAdmin):
         api_key = user.userprofile.api_key
 
         if api_key:
-            return qs.filter(userprofile__api_key=api_key)
+            return qs.filter(userprofile__api_key=api_key).exclude(username=os.environ.get('DJANGO_SUPERUSER_USERNAME'))
         else:
             return qs.none()
 
