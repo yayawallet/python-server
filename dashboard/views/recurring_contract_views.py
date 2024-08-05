@@ -104,7 +104,7 @@ async def proxy_deactivate_subscription(request, id):
 @async_permission_required('auth.bulk_import_contract', raise_exception=True)
 @api_view(['POST'])
 async def bulk_contract_import(request):
-    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile)(request)
     uploaded_file = request.FILES.get('file')
     if not uploaded_file:
         return HttpResponseBadRequest("No file uploaded.")
@@ -147,7 +147,7 @@ async def bulk_contract_import(request):
     )    
     await sync_to_async(instance.save)()
     saved_id = instance.uuid
-    import_contract_rows.delay(data, saved_id, logged_in_user.api_key)
+    import_contract_rows.delay(data, saved_id, logged_in_user_profile.api_key)
 
     return JsonResponse({"message": "Contract Requests Import in Progress!!"}, safe=False)
 
@@ -158,7 +158,7 @@ def serialize_failed_contracts(failed_contracts):
 @async_permission_required('auth.bulk_import_request_payment', raise_exception=True)
 @api_view(['POST'])
 async def bulk_recurring_payment_request_import(request):
-    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile)(request)
     uploaded_file = request.FILES.get('file')
     if not uploaded_file:
         return HttpResponseBadRequest("No file uploaded.")
@@ -201,6 +201,6 @@ async def bulk_recurring_payment_request_import(request):
     )    
     await sync_to_async(instance.save)()
     saved_id = instance.uuid
-    import_recurring_payment_request_rows.delay(data, saved_id, logged_in_user.api_key)
+    import_recurring_payment_request_rows.delay(data, saved_id, logged_in_user_profile.api_key)
 
     return JsonResponse({"message": "Recurring Payment Requests Import in Progress!!"}, safe=False)

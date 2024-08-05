@@ -56,7 +56,7 @@ async def proxy_create_bill(request):
 @async_permission_required('auth.create_bulk_bill', raise_exception=True)
 @api_view(['POST'])
 async def proxy_create_bulk_bill(request):
-    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile)(request)
     uploaded_file = request.FILES.get('file')
     if not uploaded_file:
         return HttpResponseBadRequest("No file uploaded.")
@@ -99,18 +99,19 @@ async def proxy_create_bulk_bill(request):
     )
     await sync_to_async(instance.save)()
     saved_id = instance.uuid
-    import_bill_rows.delay(data, saved_id, logged_in_user.api_key)
+    import_bill_rows.delay(data, saved_id, logged_in_user_profile.api_key)
 
     return JsonResponse({"message": "Bill Payments Import in Progress!!"}, safe=False)
 
 @api_view(['GET'])
 async def proxy_bulk_bill_status(request):
     logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
+    data = request.data
     page = request.GET.get('p')
     if not page:
         page = "1"
     params = "?p=" + page
-    response = await bill.bulk_bill_status(params, logged_in_user.api_key)
+    response = await bill.bulk_bill_status(data.get('client_yaya_account'), params, logged_in_user.api_key)
     parsed_content = parse_response(response)
     result = await sync_to_async(
         lambda: list(
