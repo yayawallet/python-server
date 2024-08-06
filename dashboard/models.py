@@ -13,6 +13,9 @@ class ApiKey(models.Model):
     name = models.CharField()
     api_key = models.CharField()
 
+    def __str__(self):
+        return self.api_key
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     country = models.CharField(null=True, blank=True)
