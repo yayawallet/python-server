@@ -14,7 +14,7 @@ def get_logged_in_user_profile(request):
   token = auth_header.split(' ')[1]
   decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
   logged_in_user_profile = UserProfile.objects.get(user_id=decoded_token.get("user_id"))
-  return logged_in_user_profile
+  return logged_in_user_profile.api_key
 
 def parse_response(response):
   content = ''

@@ -5,6 +5,14 @@ from django.dispatch import receiver
 from django.db.models.signals import post_save
 from django.db.models import Q
 
+class ApiKey(models.Model):
+    uuid = models.UUIDField( 
+         primary_key = True, 
+         default = uuid.uuid4, 
+         editable = False)
+    name = models.CharField()
+    api_key = models.CharField()
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     country = models.CharField(null=True, blank=True)
@@ -14,7 +22,7 @@ class UserProfile(models.Model):
     date_of_birth = models.DateField(null=True, blank=True)
     profile_image = models.ImageField(upload_to='profile_images/', null=True, blank=True)
     id_image = models.ImageField(upload_to='profile_images/', null=True, blank=True)
-    api_key = models.CharField()
+    api_key = models.ForeignKey(ApiKey, on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
         return self.user.username
