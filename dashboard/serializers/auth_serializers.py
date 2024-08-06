@@ -22,7 +22,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['user'] = {
             'user_id': self.user.id,
             'username': self.user.username,
-            'api_key': self.user.userprofile.api_key,
+            'api_key': self.user.userprofile.api_key.api_key,
             'roles': list(self.user.groups.values_list('name', flat=True)),
             'permissions': list(self.user.get_group_permissions())
         }
