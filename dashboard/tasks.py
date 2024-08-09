@@ -307,7 +307,7 @@ async def import_bill_rows(self: celery.Task, data, id, api_key):
         'cluster', 'description', 'phone', 'email'
     ]
 
-    request_slice_count = 10
+    request_slice_count = 1000
 
     for row in data:
         try:
@@ -421,7 +421,7 @@ async def import_payout_rows(self: celery.Task, data, id, api_key):
         'institution', 'account_number', 'details'
     ]
 
-    request_slice_count = 10
+    request_slice_count = 1000
 
     for row in data:
         try:
