@@ -24,7 +24,7 @@ async def proxy_cluster_payout(request):
 @async_permission_required('auth.create_bulk_payout', raise_exception=True)
 @api_view(['POST'])
 async def proxy_bulk_cluster_payout(request):
-    # logged_in_user_profile=await sync_to_async(get_logged_in_user_profile)(request)
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile)(request)
     uploaded_file = request.FILES.get('file')
     if not uploaded_file:
         return HttpResponseBadRequest("No file uploaded.")
@@ -52,28 +52,24 @@ async def proxy_bulk_cluster_payout(request):
         data = df.to_dict(orient='records')
     except Exception as e:
         return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
-    # auth_header = request.headers.get('Authorization')
-    # token = auth_header.split(' ')[1]
-    # decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
-    # logged_in_user = await sync_to_async(User.objects.get)(id=decoded_token.get("user_id"))
-    # instance = ImportedDocuments(
-    #     file_name=file_name, 
-    #     remark=request.POST.get('remark'), 
-    #     import_type=ImportTypes.get('PAYOUT'), 
-    #     failed_count=0, 
-    #     successful_count=0, 
-    #     on_queue_count=len(data),
-    #     user_id=logged_in_user
-    # )
-    # await sync_to_async(instance.save)()
-    # saved_id = instance.uuid
-    # import_payout_rows.delay(data, saved_id, logged_in_user_profile.api_key)
+    auth_header = request.headers.get('Authorization')
+    token = auth_header.split(' ')[1]
+    decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
+    logged_in_user = await sync_to_async(User.objects.get)(id=decoded_token.get("user_id"))
+    instance = ImportedDocuments(
+        file_name=file_name, 
+        remark=request.POST.get('remark'), 
+        import_type=ImportTypes.get('PAYOUT'), 
+        failed_count=0, 
+        successful_count=0, 
+        on_queue_count=len(data),
+        user_id=logged_in_user
+    )
+    await sync_to_async(instance.save)()
+    saved_id = instance.uuid
+    import_payout_rows.delay(data, saved_id, logged_in_user_profile.api_key)
 
-    # return JsonResponse({"message": "Payout Import in Progress!!"}, safe=False)
-
-    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
-    response = await payout.bulk_cluster_payout(data, logged_in_user.api_key)
-    return stream_response(response)
+    return JsonResponse({"message": "Payout Import in Progress!!"}, safe=False)
 
 @api_view(['POST'])
 async def proxy_get_payout(request):

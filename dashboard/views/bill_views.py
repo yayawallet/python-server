@@ -56,7 +56,7 @@ async def proxy_create_bill(request):
 @async_permission_required('auth.create_bulk_bill', raise_exception=True)
 @api_view(['POST'])
 async def proxy_create_bulk_bill(request):
-    # logged_in_user_profile=await sync_to_async(get_logged_in_user_profile)(request)
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile)(request)
     uploaded_file = request.FILES.get('file')
     if not uploaded_file:
         return HttpResponseBadRequest("No file uploaded.")
@@ -84,67 +84,64 @@ async def proxy_create_bulk_bill(request):
         data = df.to_dict(orient='records')
     except Exception as e:
         return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
-    # auth_header = request.headers.get('Authorization')
-    # token = auth_header.split(' ')[1]
-    # decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
-    # logged_in_user = await sync_to_async(User.objects.get)(id=decoded_token.get("user_id"))
-    # instance = ImportedDocuments(
-    #     file_name=file_name, 
-    #     remark=request.POST.get('remark'), 
-    #     import_type=ImportTypes.get('BILL'), 
-    #     failed_count=0, 
-    #     successful_count=0, 
-    #     on_queue_count=len(data),
-    #     user_id=logged_in_user
-    # )
-    # await sync_to_async(instance.save)()
-    # saved_id = instance.uuid
-    # import_bill_rows.delay(data, saved_id, logged_in_user_profile.api_key)
-    logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
-    response = await bill.create_bulk_bill(data, logged_in_user.api_key)
-    return stream_response(response)
+    auth_header = request.headers.get('Authorization')
+    token = auth_header.split(' ')[1]
+    decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
+    logged_in_user = await sync_to_async(User.objects.get)(id=decoded_token.get("user_id"))
+    instance = ImportedDocuments(
+        file_name=file_name, 
+        remark=request.POST.get('remark'), 
+        import_type=ImportTypes.get('BILL'), 
+        failed_count=0, 
+        successful_count=0, 
+        on_queue_count=len(data),
+        user_id=logged_in_user
+    )
+    await sync_to_async(instance.save)()
+    saved_id = instance.uuid
+    import_bill_rows.delay(data, saved_id, logged_in_user_profile.api_key)
 
-    # return JsonResponse({"message": "Bill Payments Import in Progress!!"}, safe=False)
+    return JsonResponse({"message": "Bill Payments Import in Progress!!"}, safe=False)
 
 @api_view(['GET'])
 async def proxy_bulk_bill_status(request):
     logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
+    data = request.data
     page = request.GET.get('p')
     if not page:
         page = "1"
     params = "?p=" + page
     response = await bill.bulk_bill_status(params, logged_in_user.api_key)
-    return stream_response(response)
-    # parsed_content = parse_response(response)
-    # result = await sync_to_async(
-    #     lambda: list(
-    #         BillSlice.objects.values('imported_document_id').annotate(
-    #             slice_upload_ids=ArrayAgg('slice_upload_id')
-    #         )
-    #     )
-    # )()
-    # merged_response = []
-    # for item in result:
-    #     imported_document_id = item['imported_document_id']
-    #     slice_upload_ids = item['slice_upload_ids']
-    #     document_report = {
-    #         "id": imported_document_id,
-    #         "failed_records": 0,
-    #         "imported_records": 0,
-    #         "submitted_records": 0,
-    #         "status": "DONE",
-    #         "createdAt": "",
-    #     }
-    #     for id in slice_upload_ids:
-    #         slice_report = get_dict_by_property_value(parsed_content.get("data"), "id", id)
-    #         document_report['failed_records'] = document_report['failed_records'] + slice_report['failed_records']
-    #         document_report['imported_records'] = document_report['imported_records'] + slice_report['imported_records']
-    #         document_report['submitted_records'] = document_report['submitted_records'] + slice_report['submitted_records']
-    #         document_report['createdAt'] = slice_report['createdAt']
+    parsed_content = parse_response(response)
+    result = await sync_to_async(
+        lambda: list(
+            BillSlice.objects.values('imported_document_id').annotate(
+                slice_upload_ids=ArrayAgg('slice_upload_id')
+            )
+        )
+    )()
+    merged_response = []
+    for item in result:
+        imported_document_id = item['imported_document_id']
+        slice_upload_ids = item['slice_upload_ids']
+        document_report = {
+            "id": imported_document_id,
+            "failed_records": 0,
+            "imported_records": 0,
+            "submitted_records": 0,
+            "status": "DONE",
+            "createdAt": "",
+        }
+        for id in slice_upload_ids:
+            slice_report = get_dict_by_property_value(parsed_content.get("data"), "id", id)
+            document_report['failed_records'] = document_report['failed_records'] + slice_report['failed_records']
+            document_report['imported_records'] = document_report['imported_records'] + slice_report['imported_records']
+            document_report['submitted_records'] = document_report['submitted_records'] + slice_report['submitted_records']
+            document_report['createdAt'] = slice_report['createdAt']
 
-    #     merged_response.append(document_report)
+        merged_response.append(document_report)
 
-    # return JsonResponse(merged_response, safe=False)
+    return JsonResponse(merged_response, safe=False)
 
 @async_permission_required('auth.update_bill', raise_exception=True)
 @api_view(['POST'])
