@@ -16,6 +16,23 @@ def get_logged_in_user_profile(request):
   logged_in_user_profile = UserProfile.objects.get(user_id=decoded_token.get("user_id"))
   return logged_in_user_profile.api_key
 
+def get_logged_in_user_profile_object(request):
+  auth_header = request.headers.get('Authorization')
+  token = auth_header.split(' ')[1]
+  decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
+  logged_in_user_profile = UserProfile.objects.get(user_id=decoded_token.get("user_id"))
+  user_profile_dict = {
+        'user_id': logged_in_user_profile.user.id,
+        'country': logged_in_user_profile.country,
+        'address': logged_in_user_profile.address,
+        'region': logged_in_user_profile.region,
+        'phone': logged_in_user_profile.phone,
+        'date_of_birth': logged_in_user_profile.date_of_birth.isoformat() if logged_in_user_profile.date_of_birth else None,
+        'profile_image': logged_in_user_profile.profile_image.url if logged_in_user_profile.profile_image else None,
+        'id_image': logged_in_user_profile.id_image.url if logged_in_user_profile.id_image else None,
+    }
+  return user_profile_dict
+
 def parse_response(response):
   content = ''
   for chunk in response.streaming_content:

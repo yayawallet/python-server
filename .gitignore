@@ -9,6 +9,7 @@ dashboard/permissions/__pycache__
 dashboard/exceptions/__pycache__
 dashboard/functions/__pycache__
 dashboard/forms/__pycache__
+dashboard/permissions/__pycache__
 #environment variable
 .env
 

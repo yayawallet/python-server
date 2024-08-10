@@ -58,7 +58,7 @@ class AccountsUserAdmin(AuthUserAdmin):
         return fieldsets
     
     def save_model(self, request, obj, form, change):
-        if not change:
+        if not change and not obj.is_superuser and not request.user.is_superuser:
             user = super().save_model(request, obj, form, change)
             admin_profile = request.user.userprofile
             instance = UserProfile.objects.get(user=obj)
