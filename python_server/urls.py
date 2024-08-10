@@ -20,6 +20,7 @@ urlpatterns = [
     path('', include('dashboard.urls.payout_urls')),
     path('', include('dashboard.urls.kyc_urls')),
     path('', include('dashboard.urls.auth_urls')),
+    path('', include('dashboard.urls.dashboard_user_urls')),
     path('admin', admin.site.urls),
 ]
 
