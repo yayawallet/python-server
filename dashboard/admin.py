@@ -3,7 +3,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as AuthUserAdmin
 from django.contrib.auth.models import User
-from .models import UserProfile, ApiKey
+from .models import UserProfile, ApiKey, ActionTrail
 import os
 from .forms.custom_user_change_form import CustomUserChangeForm
 
@@ -95,3 +95,4 @@ class AccountsUserAdmin(AuthUserAdmin):
 admin.site.unregister(User)
 admin.site.register(User, AccountsUserAdmin)
 admin.site.register(ApiKey)
+admin.site.register(ActionTrail)

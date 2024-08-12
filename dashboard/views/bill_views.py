@@ -106,42 +106,41 @@ async def proxy_create_bulk_bill(request):
 @api_view(['GET'])
 async def proxy_bulk_bill_status(request):
     logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
-    data = request.data
     page = request.GET.get('p')
     if not page:
         page = "1"
     params = "?p=" + page
     response = await bill.bulk_bill_status(params, logged_in_user.api_key)
-    parsed_content = parse_response(response)
-    result = await sync_to_async(
-        lambda: list(
-            BillSlice.objects.values('imported_document_id').annotate(
-                slice_upload_ids=ArrayAgg('slice_upload_id')
-            )
-        )
-    )()
-    merged_response = []
-    for item in result:
-        imported_document_id = item['imported_document_id']
-        slice_upload_ids = item['slice_upload_ids']
-        document_report = {
-            "id": imported_document_id,
-            "failed_records": 0,
-            "imported_records": 0,
-            "submitted_records": 0,
-            "status": "DONE",
-            "createdAt": "",
-        }
-        for id in slice_upload_ids:
-            slice_report = get_dict_by_property_value(parsed_content.get("data"), "id", id)
-            document_report['failed_records'] = document_report['failed_records'] + slice_report['failed_records']
-            document_report['imported_records'] = document_report['imported_records'] + slice_report['imported_records']
-            document_report['submitted_records'] = document_report['submitted_records'] + slice_report['submitted_records']
-            document_report['createdAt'] = slice_report['createdAt']
+    # parsed_content = parse_response(response)
+    # result = await sync_to_async(
+    #     lambda: list(
+    #         BillSlice.objects.values('imported_document_id').annotate(
+    #             slice_upload_ids=ArrayAgg('slice_upload_id')
+    #         )
+    #     )
+    # )()
+    # merged_response = []
+    # for item in result:
+    #     imported_document_id = item['imported_document_id']
+    #     slice_upload_ids = item['slice_upload_ids']
+    #     document_report = {
+    #         "id": imported_document_id,
+    #         "failed_records": 0,
+    #         "imported_records": 0,
+    #         "submitted_records": 0,
+    #         "status": "DONE",
+    #         "createdAt": "",
+    #     }
+    #     for id in slice_upload_ids:
+    #         slice_report = get_dict_by_property_value(parsed_content.get("data"), "id", id)
+    #         document_report['failed_records'] = document_report['failed_records'] + slice_report['failed_records']
+    #         document_report['imported_records'] = document_report['imported_records'] + slice_report['imported_records']
+    #         document_report['submitted_records'] = document_report['submitted_records'] + slice_report['submitted_records']
+    #         document_report['createdAt'] = slice_report['createdAt']
 
-        merged_response.append(document_report)
+    #     merged_response.append(document_report)
 
-    return JsonResponse(merged_response, safe=False)
+    return stream_response(response)
 
 @async_permission_required('auth.update_bill', raise_exception=True)
 @api_view(['POST'])
