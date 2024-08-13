@@ -87,12 +87,35 @@ class AccountsUserAdmin(AuthUserAdmin):
             return qs
         api_key = user.userprofile.api_key
 
-        if api_key:
+        if api_key and request.user.groups.filter(name='Admin').exists():
             return qs.filter(userprofile__api_key=api_key).exclude(is_superuser=True)
         else:
             return qs.none()
+        
+class ActionTrailAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_view_permission(self, request, obj=None):
+        return True
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        user = request.user
+        api_key = user.userprofile.api_key
+        if user.is_superuser:
+            return qs
+        elif request.user.groups.filter(name='Admin').exists():
+            return qs.filter(user_id__userprofile__api_key=api_key).exclude(user_id__is_superuser=True)
+        return qs.none()
 
 admin.site.unregister(User)
 admin.site.register(User, AccountsUserAdmin)
 admin.site.register(ApiKey)
-admin.site.register(ActionTrail)
+admin.site.register(ActionTrail, ActionTrailAdmin)

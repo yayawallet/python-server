@@ -28,12 +28,12 @@ services:
     entrypoint: ["/bin/sh","-c"]
     command:
       - |
-        while ! nc -z rabbitmq_server 5672; do
-          echo "Waiting for Celery..."
-          sleep 1
+        while ! nc -z db 5432; do
+          echo "Waiting for db..."
+          sleep 2
         done
 
-        echo "Celery is up - starting Django"
+        echo "db is up - starting Django"
         python manage.py automate_permissions
         if [ "$DJANGO_SUPERUSER_USERNAME" ] && [ "$DJANGO_SUPERUSER_EMAIL" ] && [ "$DJANGO_SUPERUSER_PASSWORD" ]; then
           python manage.py createsuperuser --noinput || true
