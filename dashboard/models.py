@@ -196,6 +196,10 @@ class ActionTrail(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        created_at_str = self.created_at.strftime("%Y-%m-%d %H:%M:%S")
+        return self.user_id.username + ' - ' + self.action_type + ' (' + created_at_str + ')'
+
 class BillSlice(models.Model):
     uuid = models.UUIDField( 
          primary_key = True, 

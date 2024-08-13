@@ -40,6 +40,7 @@ class Command(BaseCommand):
         change_userprofile = Permission.objects.get(codename="change_userprofile")
         delete_userprofile = Permission.objects.get(codename="delete_userprofile")
         view_userprofile = Permission.objects.get(codename="view_userprofile")
+        view_actiontrail = Permission.objects.get(codename="view_actiontrail")
 
         group.permissions.add(can_transfer_money)
         group.permissions.add(buy_airtime)
@@ -72,5 +73,6 @@ class Command(BaseCommand):
         group.permissions.add(change_userprofile)
         group.permissions.add(delete_userprofile)
         group.permissions.add(view_userprofile)
+        group.permissions.add(view_actiontrail)
 
         self.stdout.write(self.style.SUCCESS('Successfully added permissions to Admin group'))
