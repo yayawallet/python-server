@@ -6,15 +6,18 @@ from django.http.response import JsonResponse
 from asgiref.sync import sync_to_async
 from ..permisssions.async_permission import async_permission_required
 from django.http import HttpResponseBadRequest
-from ..models import ImportedDocuments
+from ..models import ImportedDocuments, ApprovalRequest, RejectedRequest
 import pandas as pd
 from dashboard.tasks import import_scheduled_rows
-from ..constants import ImportTypes
+from ..constants import ImportTypes, Requests
 import jwt
-from django.contrib.auth.models import User
-from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile
-from ..models import ActionTrail
-from ..constants import Actions
+from django.contrib.auth.models import User, Group
+from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile, get_logged_in_user_profile_instance
+from ..models import ActionTrail, UserProfile
+from ..constants import Actions, Approve, Reject
+from django.db.models import Q
+from rest_framework.response import Response
+from ..serializers.serializers import ApprovalRequestSerializer
 
 @async_permission_required('auth.create_schedule', raise_exception=True)
 @api_view(['POST'])
@@ -59,12 +62,53 @@ async def proxy_archive_schedule(request, id):
     logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     response = await scheduled.archive(id, logged_in_user.api_key)
     return stream_response(response)
-    
-@async_permission_required('auth.bulk_schedule_import', raise_exception=True)
+
+@async_permission_required('auth.bulk_schedule_request', raise_exception=True)
 @api_view(['POST'])
-async def bulk_schedule_import(request):
+async def bulk_schedule_import_request(request):
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
+    uploaded_file = request.FILES.get('file')
+    if not uploaded_file:
+        return HttpResponseBadRequest("No file uploaded.")
+    
+    file_name = uploaded_file.name
+
+    if file_name.endswith('.csv'):
+        try:
+            df = pd.read_csv(uploaded_file)
+        except Exception as e:
+            return HttpResponseBadRequest(f"Error reading CSV file: {e}")
+    elif file_name.endswith(('.xls', '.xlsx')):
+        try:
+            df = pd.read_excel(uploaded_file)
+        except Exception as e:
+            return HttpResponseBadRequest(f"Error reading Excel file: {e}")
+    else:
+        return HttpResponseBadRequest("The uploaded file is not a CSV or Excel file.")
+
+    instance = ApprovalRequest(
+        requesting_user=logged_in_user_profile,
+        request_type=Requests.get('SCHEDULED_BULK_IMPORT'), 
+        file=uploaded_file, 
+        remark=request.POST.get('remark'), 
+    )
+    await sync_to_async(instance.save)()
+
+    return JsonResponse({"message": "Scheduled Payments Import Request created!!"}, safe=False)
+    
+@async_permission_required('auth.approval_bulk_schedule_import', raise_exception=True)
+@api_view(['POST'])
+async def submit_bulk_schedule_response(request):
     logged_in_user_profile=await sync_to_async(get_logged_in_user_profile)(request)
     uploaded_file = request.FILES.get('file')
+    auth_header = request.headers.get('Authorization')
+    token = auth_header.split(' ')[1]
+    decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
+    logged_in_user = await sync_to_async(User.objects.get)(id=decoded_token.get("user_id"))
+    approval_request = await sync_to_async(ApprovalRequest.objects.get)(uuid=request.POST.get('approval_request_id'))
+    remark=approval_request.remark
+    uploaded_file = approval_request.file
+
     if not uploaded_file:
         return HttpResponseBadRequest("No file uploaded.")
     
@@ -91,21 +135,68 @@ async def bulk_schedule_import(request):
         data = df.to_dict(orient='records')
     except Exception as e:
         return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
-    auth_header = request.headers.get('Authorization')
-    token = auth_header.split(' ')[1]
-    decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
-    logged_in_user = await sync_to_async(User.objects.get)(id=decoded_token.get("user_id"))
-    instance = ImportedDocuments(
-        file_name=file_name, 
-        remark=request.POST.get('remark'), 
-        import_type=ImportTypes.get('SCHEDULED'), 
-        failed_count=0, 
-        successful_count=0, 
-        on_queue_count=len(data),
-        user_id=logged_in_user
-    )
-    await sync_to_async(instance.save)()
-    saved_id = instance.uuid
-    import_scheduled_rows.delay(data, saved_id, logged_in_user_profile.api_key)
+    
+    if request.POST.get('response') == Approve:
+        await sync_to_async(approval_request.approved_by.add)(logged_in_user)
+        await sync_to_async(approval_request.save)()
 
-    return JsonResponse({"message": "Scheduled Payments Import in Progress!!"}, safe=False)
+        approver_group = await sync_to_async(Group.objects.get)(name='Approver')
+        approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
+        approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
+        approvers_count = await sync_to_async(lambda: UserProfile.objects.filter(
+            user__id__in=approvers_user_ids,
+            user__userprofile__api_key=approval_request.requesting_user.api_key
+        ).count())()
+
+        approved_users = await sync_to_async(approval_request.approved_by.all)()
+        approved_users_count = await sync_to_async(approved_users.count)()
+
+        if approvers_count == approved_users_count:
+            instance = ImportedDocuments(
+                file_name=file_name, 
+                remark=remark, 
+                import_type=ImportTypes.get('SCHEDULED'), 
+                failed_count=0, 
+                successful_count=0, 
+                on_queue_count=len(data),
+                user_id=logged_in_user
+            )
+            await sync_to_async(instance.save)()
+            saved_id = instance.uuid
+            import_scheduled_rows.delay(data, saved_id, logged_in_user_profile.api_key)
+
+            return JsonResponse({"message": "Scheduled Payments Import in Progress!!"}, safe=False)
+        else:
+            serialized_data = await sync_to_async(get_single_approval_request_serialized_data)(approval_request)
+            return Response(serialized_data)
+    else:
+        rejected_request_instance = RejectedRequest(
+            user=logged_in_user, 
+            rejection_reason=request.POST.get('rejection_reason'),
+        )
+        await sync_to_async(rejected_request_instance.save)()
+        await sync_to_async(approval_request.rejected_by.add)(rejected_request_instance)
+        await sync_to_async(approval_request.save)()
+        serialized_data = await sync_to_async(get_single_approval_request_serialized_data)(approval_request)
+        return Response(serialized_data)
+
+def get_approval_request_serialized_data(db_results):
+    serializer = ApprovalRequestSerializer(db_results, many=True)
+    return serializer.data
+
+def get_single_approval_request_serialized_data(db_results):
+    serializer = ApprovalRequestSerializer(db_results)
+    return serializer.data
+
+@async_permission_required('auth.approval_bulk_schedule_import', raise_exception=True)
+@api_view(['GET'])
+async def scheduled_bulk_requests(request):
+    logged_in_user=await sync_to_async(get_logged_in_user)(request)
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
+    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+        requesting_user__api_key=logged_in_user_profile.api_key
+    ).exclude(
+        Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
+    ).all())()
+    serialized_data = await sync_to_async(get_approval_request_serialized_data)(queryset)
+    return Response(serialized_data)

@@ -33,6 +33,13 @@ def get_logged_in_user_profile_object(request):
     }
   return user_profile_dict
 
+def get_logged_in_user_profile_instance(request):
+  auth_header = request.headers.get('Authorization')
+  token = auth_header.split(' ')[1]
+  decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
+  logged_in_user_profile = UserProfile.objects.get(user_id=decoded_token.get("user_id"))
+  return logged_in_user_profile
+
 def parse_response(response):
   content = ''
   for chunk in response.streaming_content:

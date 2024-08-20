@@ -152,6 +152,18 @@ def create_custom_permissions(apps, schema_editor):
         content_type=content_type,
     )
 
+    Permission.objects.create(
+        codename='approval_bulk_schedule_import',
+        name='Approval Bulk Schedule Import',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='bulk_schedule_request',
+        name='Bulk Schedule Request',
+        content_type=content_type,
+    )
+
 class Migration(migrations.Migration):
 
     dependencies = [

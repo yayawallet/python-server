@@ -10,8 +10,12 @@ class Command(BaseCommand):
 
         call_command('migrate')
 
+        call_command('add_accountant_permissions')
+
         call_command('add_admin_permissions')
 
         call_command('add_clerk_permissions')
 
-        call_command('add_agent_permissions')        
+        call_command('add_agent_permissions')      
+
+        call_command('add_approver_permissions')    
