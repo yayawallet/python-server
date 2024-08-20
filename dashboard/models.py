@@ -209,3 +209,28 @@ class BillSlice(models.Model):
     imported_document_id = models.ForeignKey(ImportedDocuments, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+class RejectedRequest(models.Model):
+    uuid = models.UUIDField( 
+         primary_key = True, 
+         default = uuid.uuid4, 
+         editable = False) 
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    rejection_reason = models.CharField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+class ApprovalRequest(models.Model):
+    uuid = models.UUIDField( 
+         primary_key = True, 
+         default = uuid.uuid4, 
+         editable = False) 
+    requesting_user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    request_type = models.CharField()
+    file = models.FileField(upload_to='uploads/', null=True, blank=True)
+    remark = models.CharField(null=True, blank=True)
+    approved_by = models.ManyToManyField(User, related_name='approved_requests', blank=True)
+    rejected_by = models.ManyToManyField(RejectedRequest, related_name='rejected_requests', blank=True)
+    request_json = models.CharField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
