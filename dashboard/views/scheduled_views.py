@@ -67,6 +67,7 @@ async def proxy_archive_schedule(request, id):
 @api_view(['POST'])
 async def bulk_schedule_import_request(request):
     logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
+    logged_in_user=await sync_to_async(get_logged_in_user)(request)
     uploaded_file = request.FILES.get('file')
     if not uploaded_file:
         return HttpResponseBadRequest("No file uploaded.")
@@ -85,6 +86,15 @@ async def bulk_schedule_import_request(request):
             return HttpResponseBadRequest(f"Error reading Excel file: {e}")
     else:
         return HttpResponseBadRequest("The uploaded file is not a CSV or Excel file.")
+    
+    df.reset_index(inplace=True)
+    df.rename(columns={'index': 'row_number'}, inplace=True)
+    df['row_number'] += 2
+
+    try:
+        data = df.to_dict(orient='records')
+    except Exception as e:
+        return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
 
     instance = ApprovalRequest(
         requesting_user=logged_in_user_profile,
@@ -93,6 +103,30 @@ async def bulk_schedule_import_request(request):
         remark=request.POST.get('remark'), 
     )
     await sync_to_async(instance.save)()
+
+    approver_group = await sync_to_async(Group.objects.get)(name='Approver')
+    approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
+    approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
+    approvers_count = await sync_to_async(lambda: UserProfile.objects.filter(
+        user__id__in=approvers_user_ids,
+        user__userprofile__api_key=logged_in_user_profile.api_key
+    ).count())()
+
+    if approvers_count == 0:
+        instance = ImportedDocuments(
+            file_name=file_name, 
+            remark=request.POST.get('remark'), 
+            import_type=ImportTypes.get('SCHEDULED'), 
+            failed_count=0, 
+            successful_count=0, 
+            on_queue_count=len(data),
+            user_id=logged_in_user
+        )
+        await sync_to_async(instance.save)()
+        saved_id = instance.uuid
+        import_scheduled_rows.delay(data, saved_id, logged_in_user_profile.api_key)
+
+        return JsonResponse({"message": "Scheduled Payments Import in Progress!!"}, safe=False)
 
     return JsonResponse({"message": "Scheduled Payments Import Request created!!"}, safe=False)
     
@@ -200,3 +234,15 @@ async def scheduled_bulk_requests(request):
     ).all())()
     serialized_data = await sync_to_async(get_approval_request_serialized_data)(queryset)
     return Response(serialized_data)
+
+
+@async_permission_required('auth.my_bulk_schedule_requests', raise_exception=True)
+@api_view(['GET'])
+async def scheduled_my_bulk_requests(request):
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
+    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+        requesting_user__id=logged_in_user_profile.id
+    ).all())()
+    serialized_data = await sync_to_async(get_approval_request_serialized_data)(queryset)
+    return Response(serialized_data)
+

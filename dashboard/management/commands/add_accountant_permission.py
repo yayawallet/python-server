@@ -31,6 +31,7 @@ class Command(BaseCommand):
         create_payout = Permission.objects.get(codename="create_payout")
         create_bulk_payout = Permission.objects.get(codename="create_bulk_payout")
         bulk_schedule_request = Permission.objects.get(codename="bulk_schedule_request")
+        my_bulk_schedule_requests = Permission.objects.get(codename="my_bulk_schedule_requests")
 
         group.permissions.add(can_transfer_money)
         group.permissions.add(buy_airtime)
@@ -54,5 +55,6 @@ class Command(BaseCommand):
         group.permissions.add(create_payout)
         group.permissions.add(create_bulk_payout)
         group.permissions.add(bulk_schedule_request)
+        group.permissions.add(my_bulk_schedule_requests)
 
         self.stdout.write(self.style.SUCCESS('Successfully added permissions to Accountant group'))
