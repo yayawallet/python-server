@@ -63,18 +63,6 @@ def create_custom_permissions(apps, schema_editor):
     )
 
     Permission.objects.create(
-        codename='bulk_import_contract',
-        name='Bulk Import Contract',
-        content_type=content_type,
-    )
-
-    Permission.objects.create(
-        codename='bulk_import_request_payment',
-        name='Bulk Import Request Payment',
-        content_type=content_type,
-    )
-
-    Permission.objects.create(
         codename='create_saving',
         name='Create Saving',
         content_type=content_type,
@@ -89,12 +77,6 @@ def create_custom_permissions(apps, schema_editor):
     Permission.objects.create(
         codename='create_schedule',
         name='Create Schedule',
-        content_type=content_type,
-    )
-
-    Permission.objects.create(
-        codename='bulk_schedule_import',
-        name='Bulk Schedule Import',
         content_type=content_type,
     )
 
@@ -167,6 +149,42 @@ def create_custom_permissions(apps, schema_editor):
     Permission.objects.create(
         codename='my_bulk_schedule_requests',
         name='My Bulk Schedule Requests',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='approval_bulk_contract_import',
+        name='Approval Bulk Contract Import',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='bulk_contract_request',
+        name='Bulk Contract Request',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='my_bulk_contract_requests',
+        name='My Bulk Contract Requests',
+        content_type=content_type,
+    )
+    
+    Permission.objects.create(
+        codename='approval_bulk_payment_request_import',
+        name='Approval Bulk Payment Request Import',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='bulk_payment_request',
+        name='Bulk Payment Request',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='my_bulk_payment_requests',
+        name='My Bulk Payment Requests',
         content_type=content_type,
     )
 

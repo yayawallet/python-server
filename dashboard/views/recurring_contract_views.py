@@ -3,19 +3,22 @@ from yayawallet_python_sdk.api import recurring_contract
 from django.http.response import JsonResponse
 from asgiref.sync import sync_to_async
 from .stream_response import stream_response
-from ..models import FailedImports, ImportedDocuments
+from ..models import ImportedDocuments, ApprovalRequest, RejectedRequest
 from ..serializers.serializers import FailedImportsSerializer
-from ..constants import ImportTypes
+from ..constants import ImportTypes, Requests, Approve
 from django.http import HttpResponseBadRequest
 from ..permisssions.async_permission import async_permission_required
 import pandas as pd
 from dashboard.tasks import import_contract_rows, import_recurring_payment_request_rows
 from python_server.celery import app
+from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile, get_logged_in_user_profile_instance
 import jwt
-from django.contrib.auth.models import User
-from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile
-from ..models import ActionTrail
+from django.contrib.auth.models import User, Group
+from ..models import ActionTrail, UserProfile
 from ..constants import Actions
+from django.db.models import Q
+from rest_framework.response import Response
+from ..serializers.serializers import ApprovalRequestSerializer
 
 @api_view(['GET'])
 async def proxy_list_all_contracts(request):
@@ -101,10 +104,11 @@ async def proxy_deactivate_subscription(request, id):
     response = await recurring_contract.deactivate_subscription(id, logged_in_user.api_key)
     return stream_response(response)
 
-@async_permission_required('auth.bulk_import_contract', raise_exception=True)
+@async_permission_required('auth.bulk_contract_request', raise_exception=True)
 @api_view(['POST'])
-async def bulk_contract_import(request):
-    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile)(request)
+async def bulk_contract_import_request(request):
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
+    logged_in_user=await sync_to_async(get_logged_in_user)(request)
     uploaded_file = request.FILES.get('file')
     if not uploaded_file:
         return HttpResponseBadRequest("No file uploaded.")
@@ -132,33 +136,164 @@ async def bulk_contract_import(request):
         data = df.to_dict(orient='records')
     except Exception as e:
         return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
+
+    instance = ApprovalRequest(
+        requesting_user=logged_in_user_profile,
+        request_type=Requests.get('CONTRACT_BULK_IMPORT'), 
+        file=uploaded_file, 
+        remark=request.POST.get('remark'), 
+    )
+    await sync_to_async(instance.save)()
+
+    approver_group = await sync_to_async(Group.objects.get)(name='Approver')
+    approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
+    approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
+    approvers_count = await sync_to_async(lambda: UserProfile.objects.filter(
+        user__id__in=approvers_user_ids,
+        user__userprofile__api_key=logged_in_user_profile.api_key
+    ).count())()
+
+    if approvers_count == 0:
+        instance = ImportedDocuments(
+            file_name=file_name, 
+            remark=request.POST.get('remark'), 
+            import_type=ImportTypes.get('SCHEDULED'), 
+            failed_count=0, 
+            successful_count=0, 
+            on_queue_count=len(data),
+            user_id=logged_in_user
+        )
+        await sync_to_async(instance.save)()
+        saved_id = instance.uuid
+        import_contract_rows.delay(data, saved_id, logged_in_user_profile.api_key)
+
+        return JsonResponse({"message": "Contracts Import in Progress!!"}, safe=False)
+
+    return JsonResponse({"message": "Contracts Import Request created!!"}, safe=False)
+
+@async_permission_required('auth.approval_bulk_contract_import', raise_exception=True)
+@api_view(['POST'])
+async def submit_bulk_contract_response(request):
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile)(request)
+    uploaded_file = request.FILES.get('file')
     auth_header = request.headers.get('Authorization')
     token = auth_header.split(' ')[1]
     decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
     logged_in_user = await sync_to_async(User.objects.get)(id=decoded_token.get("user_id"))
-    instance = ImportedDocuments(
-        file_name=file_name, 
-        remark=request.POST.get('remark'), 
-        import_type=ImportTypes.get('CONTRACT'), 
-        failed_count=0, 
-        successful_count=0, 
-        on_queue_count=len(data),
-        user_id=logged_in_user
-    )    
-    await sync_to_async(instance.save)()
-    saved_id = instance.uuid
-    import_contract_rows.delay(data, saved_id, logged_in_user_profile.api_key)
+    approval_request = await sync_to_async(ApprovalRequest.objects.get)(uuid=request.POST.get('approval_request_id'))
+    remark=approval_request.remark
+    uploaded_file = approval_request.file
 
-    return JsonResponse({"message": "Contract Requests Import in Progress!!"}, safe=False)
+    if not uploaded_file:
+        return HttpResponseBadRequest("No file uploaded.")
+    
+    file_name = uploaded_file.name
 
-def serialize_failed_contracts(failed_contracts):
-    serializer = FailedImportsSerializer(failed_contracts, many=True)
+    if file_name.endswith('.csv'):
+        try:
+            df = pd.read_csv(uploaded_file)
+        except Exception as e:
+            return HttpResponseBadRequest(f"Error reading CSV file: {e}")
+    elif file_name.endswith(('.xls', '.xlsx')):
+        try:
+            df = pd.read_excel(uploaded_file)
+        except Exception as e:
+            return HttpResponseBadRequest(f"Error reading Excel file: {e}")
+    else:
+        return HttpResponseBadRequest("The uploaded file is not a CSV or Excel file.")
+    
+    df.reset_index(inplace=True)
+    df.rename(columns={'index': 'row_number'}, inplace=True)
+    df['row_number'] += 2
+
+    try:
+        data = df.to_dict(orient='records')
+    except Exception as e:
+        return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
+    
+    if request.POST.get('response') == Approve:
+        await sync_to_async(approval_request.approved_by.add)(logged_in_user)
+        await sync_to_async(approval_request.save)()
+
+        approver_group = await sync_to_async(Group.objects.get)(name='Approver')
+        approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
+        approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
+        approvers_count = await sync_to_async(lambda: UserProfile.objects.filter(
+            user__id__in=approvers_user_ids,
+            user__userprofile__api_key=approval_request.requesting_user.api_key
+        ).count())()
+
+        approved_users = await sync_to_async(approval_request.approved_by.all)()
+        approved_users_count = await sync_to_async(approved_users.count)()
+
+        if approvers_count == approved_users_count:
+            instance = ImportedDocuments(
+                file_name=file_name, 
+                remark=remark, 
+                import_type=ImportTypes.get('CONTRACT'), 
+                failed_count=0, 
+                successful_count=0, 
+                on_queue_count=len(data),
+                user_id=logged_in_user
+            )
+            await sync_to_async(instance.save)()
+            saved_id = instance.uuid
+            import_contract_rows.delay(data, saved_id, logged_in_user_profile.api_key)
+
+            return JsonResponse({"message": "Contracts Import in Progress!!"}, safe=False)
+        else:
+            serialized_data = await sync_to_async(get_single_approval_request_serialized_data)(approval_request)
+            return Response(serialized_data)
+    else:
+        rejected_request_instance = RejectedRequest(
+            user=logged_in_user, 
+            rejection_reason=request.POST.get('rejection_reason'),
+        )
+        await sync_to_async(rejected_request_instance.save)()
+        await sync_to_async(approval_request.rejected_by.add)(rejected_request_instance)
+        await sync_to_async(approval_request.save)()
+        serialized_data = await sync_to_async(get_single_approval_request_serialized_data)(approval_request)
+        return Response(serialized_data)
+
+def get_approval_request_serialized_data(db_results):
+    serializer = ApprovalRequestSerializer(db_results, many=True)
     return serializer.data
 
-@async_permission_required('auth.bulk_import_request_payment', raise_exception=True)
+def get_single_approval_request_serialized_data(db_results):
+    serializer = ApprovalRequestSerializer(db_results)
+    return serializer.data
+
+
+@async_permission_required('auth.approval_bulk_contract_import', raise_exception=True)
+@api_view(['GET'])
+async def contract_bulk_requests(request):
+    logged_in_user=await sync_to_async(get_logged_in_user)(request)
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
+    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+        requesting_user__api_key=logged_in_user_profile.api_key,
+        request_type=Requests.get('CONTRACT_BULK_IMPORT')
+    ).exclude(
+        Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
+    ).all())()
+    serialized_data = await sync_to_async(get_approval_request_serialized_data)(queryset)
+    return Response(serialized_data)
+
+@async_permission_required('auth.my_bulk_contract_requests', raise_exception=True)
+@api_view(['GET'])
+async def contract_my_bulk_requests(request):
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
+    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+        requesting_user__id=logged_in_user_profile.id,
+        request_type=Requests.get('CONTRACT_BULK_IMPORT')
+    ).all())()
+    serialized_data = await sync_to_async(get_approval_request_serialized_data)(queryset)
+    return Response(serialized_data)
+
+@async_permission_required('auth.bulk_payment_request', raise_exception=True)
 @api_view(['POST'])
-async def bulk_recurring_payment_request_import(request):
-    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile)(request)
+async def bulk_import_payment_request(request):
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
+    logged_in_user=await sync_to_async(get_logged_in_user)(request)
     uploaded_file = request.FILES.get('file')
     if not uploaded_file:
         return HttpResponseBadRequest("No file uploaded.")
@@ -186,21 +321,166 @@ async def bulk_recurring_payment_request_import(request):
         data = df.to_dict(orient='records')
     except Exception as e:
         return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
+
+    instance = ApprovalRequest(
+        requesting_user=logged_in_user_profile,
+        request_type=Requests.get('REQUEST_PAYMENT_BULK_IMPORT'), 
+        file=uploaded_file, 
+        remark=request.POST.get('remark'), 
+    )
+    await sync_to_async(instance.save)()
+
+    approver_group = await sync_to_async(Group.objects.get)(name='Approver')
+    approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
+    approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
+    approvers_count = await sync_to_async(lambda: UserProfile.objects.filter(
+        user__id__in=approvers_user_ids,
+        user__userprofile__api_key=logged_in_user_profile.api_key
+    ).count())()
+
+    if approvers_count == 0:
+        instance = ImportedDocuments(
+            file_name=file_name, 
+            remark=request.POST.get('remark'), 
+            import_type=ImportTypes.get('REQUEST_PAYMENT'), 
+            failed_count=0, 
+            successful_count=0, 
+            on_queue_count=len(data),
+            user_id=logged_in_user
+        )
+        await sync_to_async(instance.save)()
+        saved_id = instance.uuid
+        import_recurring_payment_request_rows.delay(data, saved_id, logged_in_user_profile.api_key)
+
+        return JsonResponse({"message": "Payment Requests Import in Progress!!"}, safe=False)
+
+    return JsonResponse({"message": "Payment Requests Import Request created!!"}, safe=False)
+
+@async_permission_required('auth.approval_bulk_payment_request_import', raise_exception=True)
+@api_view(['POST'])
+async def submit_bulk_payment_request_response(request):
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile)(request)
+    uploaded_file = request.FILES.get('file')
     auth_header = request.headers.get('Authorization')
     token = auth_header.split(' ')[1]
     decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
     logged_in_user = await sync_to_async(User.objects.get)(id=decoded_token.get("user_id"))
-    instance = ImportedDocuments(
-        file_name=file_name, 
-        remark=request.POST.get('remark'), 
-        import_type=ImportTypes.get('REQUEST_PAYMENT'), 
-        failed_count=0, 
-        successful_count=0, 
-        on_queue_count=len(data),
-        user_id=logged_in_user
-    )    
-    await sync_to_async(instance.save)()
-    saved_id = instance.uuid
-    import_recurring_payment_request_rows.delay(data, saved_id, logged_in_user_profile.api_key)
+    approval_request = await sync_to_async(ApprovalRequest.objects.get)(uuid=request.POST.get('approval_request_id'))
+    remark=approval_request.remark
+    uploaded_file = approval_request.file
 
-    return JsonResponse({"message": "Recurring Payment Requests Import in Progress!!"}, safe=False)
+    if not uploaded_file:
+        return HttpResponseBadRequest("No file uploaded.")
+    
+    file_name = uploaded_file.name
+
+    if file_name.endswith('.csv'):
+        try:
+            df = pd.read_csv(uploaded_file)
+        except Exception as e:
+            return HttpResponseBadRequest(f"Error reading CSV file: {e}")
+    elif file_name.endswith(('.xls', '.xlsx')):
+        try:
+            df = pd.read_excel(uploaded_file)
+        except Exception as e:
+            return HttpResponseBadRequest(f"Error reading Excel file: {e}")
+    else:
+        return HttpResponseBadRequest("The uploaded file is not a CSV or Excel file.")
+    
+    df.reset_index(inplace=True)
+    df.rename(columns={'index': 'row_number'}, inplace=True)
+    df['row_number'] += 2
+
+    try:
+        data = df.to_dict(orient='records')
+    except Exception as e:
+        return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
+    
+    if request.POST.get('response') == Approve:
+        await sync_to_async(approval_request.approved_by.add)(logged_in_user)
+        await sync_to_async(approval_request.save)()
+
+        approver_group = await sync_to_async(Group.objects.get)(name='Approver')
+        approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
+        approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
+        approvers_count = await sync_to_async(lambda: UserProfile.objects.filter(
+            user__id__in=approvers_user_ids,
+            user__userprofile__api_key=approval_request.requesting_user.api_key
+        ).count())()
+
+        approved_users = await sync_to_async(approval_request.approved_by.all)()
+        approved_users_count = await sync_to_async(approved_users.count)()
+
+        if approvers_count == approved_users_count:
+            instance = ImportedDocuments(
+                file_name=file_name, 
+                remark=remark, 
+                import_type=ImportTypes.get('REQUEST_PAYMENT'), 
+                failed_count=0, 
+                successful_count=0, 
+                on_queue_count=len(data),
+                user_id=logged_in_user
+            )
+            await sync_to_async(instance.save)()
+            saved_id = instance.uuid
+            import_recurring_payment_request_rows.delay(data, saved_id, logged_in_user_profile.api_key)
+
+            return JsonResponse({"message": "Request Payment Import in Progress!!"}, safe=False)
+        else:
+            serialized_data = await sync_to_async(get_single_approval_request_serialized_data)(approval_request)
+            return Response(serialized_data)
+    else:
+        rejected_request_instance = RejectedRequest(
+            user=logged_in_user, 
+            rejection_reason=request.POST.get('rejection_reason'),
+        )
+        await sync_to_async(rejected_request_instance.save)()
+        await sync_to_async(approval_request.rejected_by.add)(rejected_request_instance)
+        await sync_to_async(approval_request.save)()
+        serialized_data = await sync_to_async(get_single_approval_request_serialized_data)(approval_request)
+        return Response(serialized_data)
+
+def get_approval_request_serialized_data(db_results):
+    serializer = ApprovalRequestSerializer(db_results, many=True)
+    return serializer.data
+
+def get_single_approval_request_serialized_data(db_results):
+    serializer = ApprovalRequestSerializer(db_results)
+    return serializer.data
+
+@async_permission_required('auth.approval_bulk_request_payment_import', raise_exception=True)
+@api_view(['GET'])
+async def request_payment_bulk_requests(request):
+    logged_in_user=await sync_to_async(get_logged_in_user)(request)
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
+    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+        requesting_user__api_key=logged_in_user_profile.api_key,
+        request_type=Requests.get('REQUEST_PAYMENT_BULK_IMPORT')
+    ).exclude(
+        Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
+    ).all())()
+    serialized_data = await sync_to_async(get_approval_request_serialized_data)(queryset)
+    return Response(serialized_data)
+
+@async_permission_required('auth.my_bulk_payment_requests', raise_exception=True)
+@api_view(['GET'])
+async def my_bulk_payment_requests(request):
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
+    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+        requesting_user__id=logged_in_user_profile.id,
+        request_type=Requests.get('REQUEST_PAYMENT_BULK_IMPORT')
+    ).all())()
+    serialized_data = await sync_to_async(get_approval_request_serialized_data)(queryset)
+    return Response(serialized_data)
+
+
+
+
+
+
+
+
+
+
+
+

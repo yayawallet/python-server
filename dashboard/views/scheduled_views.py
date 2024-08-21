@@ -228,7 +228,8 @@ async def scheduled_bulk_requests(request):
     logged_in_user=await sync_to_async(get_logged_in_user)(request)
     logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
     queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
-        requesting_user__api_key=logged_in_user_profile.api_key
+        requesting_user__api_key=logged_in_user_profile.api_key,
+        request_type=Requests.get('SCHEDULED_BULK_IMPORT')
     ).exclude(
         Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
     ).all())()
@@ -241,7 +242,8 @@ async def scheduled_bulk_requests(request):
 async def scheduled_my_bulk_requests(request):
     logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
     queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
-        requesting_user__id=logged_in_user_profile.id
+        requesting_user__id=logged_in_user_profile.id,
+        request_type=Requests.get('SCHEDULED_BULK_IMPORT')
     ).all())()
     serialized_data = await sync_to_async(get_approval_request_serialized_data)(queryset)
     return Response(serialized_data)
