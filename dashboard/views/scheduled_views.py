@@ -18,34 +18,151 @@ from ..constants import Actions, Approve, Reject
 from django.db.models import Q
 from rest_framework.response import Response
 from ..serializers.serializers import ApprovalRequestSerializer
+import json
 
-@async_permission_required('auth.create_schedule', raise_exception=True)
+@async_permission_required('auth.schedule_request', raise_exception=True)
 @api_view(['POST'])
-async def proxy_create_schedule(request):
+async def schedule_request(request):
     logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
     data = request.data
-    response = await scheduled.create(
-        data.get('account_number'), 
-        data.get('amount'), 
-        data.get('reason'), 
-        data.get('recurring'), 
-        data.get('start_at'), 
-        data.get('meta_data'),
-        logged_in_user.api_key
-        )
+
+    instance = ApprovalRequest(
+        request_json=json.dumps(data),
+        requesting_user=logged_in_user_profile,
+        request_type=Requests.get('SCHEDULED'), 
+    )
+    await sync_to_async(instance.save)()
+
+    approver_group = await sync_to_async(Group.objects.get)(name='Approver')
+    approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
+    approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
+    approvers_count = await sync_to_async(lambda: UserProfile.objects.filter(
+        user__id__in=approvers_user_ids,
+        user__userprofile__api_key=logged_in_user_profile.api_key
+    ).count())()
+
+    if approvers_count == 0:
+        response = await scheduled.create(
+            data.get('account_number'), 
+            data.get('amount'), 
+            data.get('reason'), 
+            data.get('recurring'), 
+            data.get('start_at'), 
+            data.get('meta_data'),
+            logged_in_user.api_key
+            )
+        
+        if response.status_code == 200 or response.status_code == 201:
+            parsed_data = parse_response(response)
+            
+            instance = ActionTrail(
+                user_id=await sync_to_async(get_logged_in_user)(request), 
+                action_id=parsed_data.get('id'), 
+                action_type=Actions.get("SCHEDULED_ACTION")
+            )
+            await sync_to_async(instance.save)()
+            return JsonResponse(parsed_data, safe=False)
+            
+        return stream_response(response)
+
+    return JsonResponse({"message": "Scheduled Payments Request created!!"}, safe=False)
+
+@async_permission_required('auth.approval_scheduled', raise_exception=True)
+@api_view(['POST'])
+async def submit_scheduled_response(request):
+    auth_header = request.headers.get('Authorization')
+    token = auth_header.split(' ')[1]
+    decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
+    logged_in_user = await sync_to_async(User.objects.get)(id=decoded_token.get("user_id"))
+    approval_request = await sync_to_async(ApprovalRequest.objects.get)(uuid=request.POST.get('approval_request_id'))
     
-    if response.status_code == 200 or response.status_code == 201:
-        parsed_data = parse_response(response)
-        
-        instance = ActionTrail(
-            user_id=await sync_to_async(get_logged_in_user)(request), 
-            action_id=parsed_data.get('id'), 
-            action_type=Actions.get("SCHEDULED_ACTION")
+    if request.POST.get('response') == Approve:
+        await sync_to_async(approval_request.approved_by.add)(logged_in_user)
+        await sync_to_async(approval_request.save)()
+
+        approver_group = await sync_to_async(Group.objects.get)(name='Approver')
+        approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
+        approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
+        approvers_count = await sync_to_async(lambda: UserProfile.objects.filter(
+            user__id__in=approvers_user_ids,
+            user__userprofile__api_key=approval_request.requesting_user.api_key
+        ).count())()
+
+        approved_users = await sync_to_async(approval_request.approved_by.all)()
+        approved_users_count = await sync_to_async(approved_users.count)()
+
+        if approvers_count == approved_users_count:
+            data = json.loads(approval_request.request_json)
+            response = await scheduled.create(
+                data.get('account_number'), 
+                data.get('amount'), 
+                data.get('reason'), 
+                data.get('recurring'), 
+                data.get('start_at'), 
+                data.get('meta_data'),
+                logged_in_user.api_key
+                )
+            
+            if response.status_code == 200 or response.status_code == 201:
+                parsed_data = parse_response(response)
+                
+                instance = ActionTrail(
+                    user_id=await sync_to_async(get_logged_in_user)(request), 
+                    action_id=parsed_data.get('id'), 
+                    action_type=Actions.get("SCHEDULED_ACTION")
+                )
+                await sync_to_async(instance.save)()
+                return JsonResponse(parsed_data, safe=False)
+                
+            return stream_response(response)
+        else:
+            serialized_data = await sync_to_async(get_single_approval_request_serialized_data)(approval_request)
+            return Response(serialized_data)
+    else:
+        rejected_request_instance = RejectedRequest(
+            user=logged_in_user, 
+            rejection_reason=request.POST.get('rejection_reason'),
         )
-        await sync_to_async(instance.save)()
-        return JsonResponse(parsed_data, safe=False)
-        
-    return stream_response(response)
+        await sync_to_async(rejected_request_instance.save)()
+        await sync_to_async(approval_request.rejected_by.add)(rejected_request_instance)
+        await sync_to_async(approval_request.save)()
+        serialized_data = await sync_to_async(get_single_approval_request_serialized_data)(approval_request)
+        return Response(serialized_data)
+
+def get_approval_request_serialized_data(db_results):
+    serializer = ApprovalRequestSerializer(db_results, many=True)
+    return serializer.data
+
+def get_single_approval_request_serialized_data(db_results):
+    serializer = ApprovalRequestSerializer(db_results)
+    return serializer.data
+
+@async_permission_required('auth.scheduled_requests', raise_exception=True)
+@api_view(['GET'])
+async def scheduled_requests(request):
+    logged_in_user=await sync_to_async(get_logged_in_user)(request)
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
+    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+        requesting_user__api_key=logged_in_user_profile.api_key,
+        request_type=Requests.get('SCHEDULED')
+    ).exclude(
+        Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
+    ).all())()
+    serialized_data = await sync_to_async(get_approval_request_serialized_data)(queryset)
+    return Response(serialized_data)
+
+
+@async_permission_required('auth.my_scheduled_requests', raise_exception=True)
+@api_view(['GET'])
+async def scheduled_my_requests(request):
+    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
+    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+        requesting_user__id=logged_in_user_profile.id,
+        request_type=Requests.get('SCHEDULED')
+    ).all())()
+    serialized_data = await sync_to_async(get_approval_request_serialized_data)(queryset)
+    return Response(serialized_data)
 
 @api_view(['GET'])
 async def proxy_schedule_list(request):
@@ -222,7 +339,7 @@ def get_single_approval_request_serialized_data(db_results):
     serializer = ApprovalRequestSerializer(db_results)
     return serializer.data
 
-@async_permission_required('auth.approval_bulk_schedule_import', raise_exception=True)
+@async_permission_required('auth.bulk_scheduled_requests', raise_exception=True)
 @api_view(['GET'])
 async def scheduled_bulk_requests(request):
     logged_in_user=await sync_to_async(get_logged_in_user)(request)

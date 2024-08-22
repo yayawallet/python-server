@@ -75,12 +75,6 @@ def create_custom_permissions(apps, schema_editor):
     )
 
     Permission.objects.create(
-        codename='create_schedule',
-        name='Create Schedule',
-        content_type=content_type,
-    )
-
-    Permission.objects.create(
         codename='generate_qr_url',
         name='Generate QR Url',
         content_type=content_type,
@@ -147,8 +141,14 @@ def create_custom_permissions(apps, schema_editor):
     )
 
     Permission.objects.create(
-        codename='my_bulk_schedule_requests',
-        name='My Bulk Schedule Requests',
+        codename='bulk_scheduled_requests',
+        name='Bulk Scheduled Requests',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='my_bulk_scheduled_requests',
+        name='My Bulk Scheduled Requests',
         content_type=content_type,
     )
 
@@ -161,6 +161,12 @@ def create_custom_permissions(apps, schema_editor):
     Permission.objects.create(
         codename='bulk_contract_request',
         name='Bulk Contract Request',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='bulk_contract_requests',
+        name='Bulk Contract Requests',
         content_type=content_type,
     )
 
@@ -183,8 +189,38 @@ def create_custom_permissions(apps, schema_editor):
     )
 
     Permission.objects.create(
+        codename='bulk_requested_payments',
+        name='Bulk Requested Payments',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
         codename='my_bulk_payment_requests',
         name='My Bulk Payment Requests',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='schedule_request',
+        name='Schedule Request',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='approval_scheduled',
+        name='Approval Scheduled',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='scheduled_requests',
+        name='Scheduled Requests',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='my_scheduled_requests',
+        name='My Scheduled Requests',
         content_type=content_type,
     )
 

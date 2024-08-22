@@ -264,7 +264,7 @@ def get_single_approval_request_serialized_data(db_results):
     return serializer.data
 
 
-@async_permission_required('auth.approval_bulk_contract_import', raise_exception=True)
+@async_permission_required('auth.bulk_contract_requests', raise_exception=True)
 @api_view(['GET'])
 async def contract_bulk_requests(request):
     logged_in_user=await sync_to_async(get_logged_in_user)(request)
@@ -448,7 +448,7 @@ def get_single_approval_request_serialized_data(db_results):
     serializer = ApprovalRequestSerializer(db_results)
     return serializer.data
 
-@async_permission_required('auth.approval_bulk_request_payment_import', raise_exception=True)
+@async_permission_required('auth.bulk_requested_payments', raise_exception=True)
 @api_view(['GET'])
 async def request_payment_bulk_requests(request):
     logged_in_user=await sync_to_async(get_logged_in_user)(request)
