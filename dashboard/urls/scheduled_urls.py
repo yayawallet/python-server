@@ -8,4 +8,5 @@ urlpatterns = [
     path('scheduled-payment/bulk-schedule-import-request', scheduled_views.bulk_schedule_import_request, name='bulk-schedule-import-request'),
     path('scheduled-payment/submit-bulk-schedule-response', scheduled_views.submit_bulk_schedule_response, name='submit-bulk-schedule-response'),
     path('scheduled-payment/scheduled-bulk-requests', scheduled_views.scheduled_bulk_requests, name='scheduled-bulk-requests'),
+    path('scheduled-payment/scheduled-my-bulk-requests', scheduled_views.scheduled_my_bulk_requests, name='scheduled-my-bulk-requests'),
 ]

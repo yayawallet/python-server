@@ -10,7 +10,11 @@ class Command(BaseCommand):
         group, _ = Group.objects.get_or_create(name="Approver")
 
         approval_bulk_schedule_import = Permission.objects.get(codename="approval_bulk_schedule_import")
+        approval_bulk_contract_import = Permission.objects.get(codename="approval_bulk_contract_import")
+        approval_bulk_payment_request_import = Permission.objects.get(codename="approval_bulk_payment_request_import")
 
         group.permissions.add(approval_bulk_schedule_import)
+        group.permissions.add(approval_bulk_contract_import)
+        group.permissions.add(approval_bulk_payment_request_import)
 
         self.stdout.write(self.style.SUCCESS('Successfully added permissions to Approver group'))
