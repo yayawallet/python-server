@@ -152,7 +152,7 @@ async def contract_requests(request):
     ).exclude(
         Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
     ).all())()
-    paginated_response = get_paginated_response(request, queryset)
+    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
     return JsonResponse(paginated_response)
 
 @async_permission_required('auth.my_contract_requests', raise_exception=True)
@@ -163,7 +163,7 @@ async def contract_my_requests(request):
         requesting_user__id=logged_in_user_profile.id,
         request_type=Requests.get('CONTRACT')
     ).all())()
-    paginated_response = get_paginated_response(request, queryset)
+    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
     return JsonResponse(paginated_response)
 
 @async_permission_required('auth.payment_request', raise_exception=True)
@@ -295,7 +295,7 @@ async def payment_requests(request):
     ).exclude(
         Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
     ).all())()
-    paginated_response = get_paginated_response(request, queryset)
+    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
     return JsonResponse(paginated_response)
 
 
@@ -307,7 +307,7 @@ async def payment_my_requests(request):
         requesting_user__id=logged_in_user_profile.id,
         request_type=Requests.get('REQUEST_PAYMENT')
     ).all())()
-    paginated_response = get_paginated_response(request, queryset)
+    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
     return JsonResponse(paginated_response)
 
 @api_view(['GET'])
@@ -517,8 +517,8 @@ async def contract_bulk_requests(request):
     ).exclude(
         Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
     ).all())()
-    serialized_data = await sync_to_async(get_approval_request_serialized_data)(queryset)
-    return Response(serialized_data)
+    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+    return JsonResponse(paginated_response)
 
 @async_permission_required('auth.my_bulk_contract_requests', raise_exception=True)
 @api_view(['GET'])
@@ -528,8 +528,8 @@ async def contract_my_bulk_requests(request):
         requesting_user__id=logged_in_user_profile.id,
         request_type=Requests.get('CONTRACT_BULK_IMPORT')
     ).all())()
-    serialized_data = await sync_to_async(get_approval_request_serialized_data)(queryset)
-    return Response(serialized_data)
+    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+    return JsonResponse(paginated_response)
 
 @async_permission_required('auth.bulk_payment_request', raise_exception=True)
 @api_view(['POST'])
@@ -701,8 +701,8 @@ async def request_payment_bulk_requests(request):
     ).exclude(
         Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
     ).all())()
-    serialized_data = await sync_to_async(get_approval_request_serialized_data)(queryset)
-    return Response(serialized_data)
+    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+    return JsonResponse(paginated_response)
 
 @async_permission_required('auth.my_bulk_payment_requests', raise_exception=True)
 @api_view(['GET'])
@@ -712,8 +712,8 @@ async def my_bulk_payment_requests(request):
         requesting_user__id=logged_in_user_profile.id,
         request_type=Requests.get('REQUEST_PAYMENT_BULK_IMPORT')
     ).all())()
-    serialized_data = await sync_to_async(get_approval_request_serialized_data)(queryset)
-    return Response(serialized_data)
+    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+    return JsonResponse(paginated_response)
 
 
 
