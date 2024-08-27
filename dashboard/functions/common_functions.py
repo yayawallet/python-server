@@ -1,6 +1,7 @@
 import jwt
 import json
 from ..models import User, UserProfile
+from django.core.paginator import Paginator
 
 def get_logged_in_user(request):
   auth_header = request.headers.get('Authorization')
@@ -55,7 +56,24 @@ def parse_response(response):
   return parsed_data
 
 def get_dict_by_property_value(data, property_name, value):
-    for item in data:
-        if item.get(property_name) == value:
-            return item
-    return None
+  for item in data:
+      if item.get(property_name) == value:
+          return item
+  return None
+
+def get_paginated_response(request, queryset):
+  per_page = request.GET.get('perPage', 15)
+  paginator = Paginator(queryset, per_page)
+    
+  page_number = request.GET.get('page', 1)
+  page_obj = paginator.get_page(page_number)
+
+  data = list(page_obj.object_list.values())
+
+  return {
+      'data': data,
+      'page': page_obj.number,
+      'lastPage': paginator.num_pages,
+      'total': paginator.count,
+      'perPage': per_page
+  }
