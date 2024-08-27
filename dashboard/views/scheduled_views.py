@@ -12,7 +12,7 @@ from dashboard.tasks import import_scheduled_rows
 from ..constants import ImportTypes, Requests
 import jwt
 from django.contrib.auth.models import User, Group
-from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile, get_logged_in_user_profile_instance
+from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile, get_logged_in_user_profile_instance, get_paginated_response
 from ..models import ActionTrail, UserProfile
 from ..constants import Actions, Approve, Reject
 from django.db.models import Q
@@ -108,7 +108,7 @@ async def submit_scheduled_response(request):
                 parsed_data = parse_response(response)
                 
                 instance = ActionTrail(
-                    user_id=await sync_to_async(get_logged_in_user)(request), 
+                    user_id=approval_request.requesting_user, 
                     action_id=parsed_data.get('id'), 
                     action_type=Actions.get("SCHEDULED_ACTION")
                 )
@@ -149,8 +149,8 @@ async def scheduled_requests(request):
     ).exclude(
         Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
     ).all())()
-    serialized_data = await sync_to_async(get_approval_request_serialized_data)(queryset)
-    return Response(serialized_data)
+    paginated_response = get_paginated_response(request, queryset)
+    return JsonResponse(paginated_response)
 
 
 @async_permission_required('auth.my_scheduled_requests', raise_exception=True)
@@ -161,8 +161,8 @@ async def scheduled_my_requests(request):
         requesting_user__id=logged_in_user_profile.id,
         request_type=Requests.get('SCHEDULED')
     ).all())()
-    serialized_data = await sync_to_async(get_approval_request_serialized_data)(queryset)
-    return Response(serialized_data)
+    paginated_response = get_paginated_response(request, queryset)
+    return JsonResponse(paginated_response)
 
 @api_view(['GET'])
 async def proxy_schedule_list(request):

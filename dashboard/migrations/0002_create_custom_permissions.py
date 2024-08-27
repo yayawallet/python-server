@@ -9,12 +9,6 @@ def create_custom_permissions(apps, schema_editor):
     content_type = ContentType.objects.get_for_model(Permission)
 
     Permission.objects.create(
-        codename='can_transfer_money',
-        name='Can Transfer Money',
-        content_type=content_type,
-    )
-
-    Permission.objects.create(
         codename='buy_airtime',
         name='Buy Airtime',
         content_type=content_type,
@@ -47,18 +41,6 @@ def create_custom_permissions(apps, schema_editor):
     Permission.objects.create(
         codename='get_invitation_otp',
         name='Get Invitation OTP',
-        content_type=content_type,
-    )
-
-    Permission.objects.create(
-        codename='create_contract',
-        name='Create Contract',
-        content_type=content_type,
-    )
-
-    Permission.objects.create(
-        codename='request_payment',
-        name='Request Payment',
         content_type=content_type,
     )
 
@@ -221,6 +203,126 @@ def create_custom_permissions(apps, schema_editor):
     Permission.objects.create(
         codename='my_scheduled_requests',
         name='My Scheduled Requests',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='contract_request',
+        name='Contract Request',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='approval_contract',
+        name='Approval Contract',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='contract_requests',
+        name='Contract Requests',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='my_contract_requests',
+        name='My Contract Requests',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='payment_request',
+        name='Payment Request',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='approval_payment_request',
+        name='Approval Payment Request',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='payment_requests',
+        name='Payment Requests',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='my_payment_requests',
+        name='My Payment Requests',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='transaction_request',
+        name='Transaction Request',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='approval_transaction',
+        name='Approval Transaction',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='transaction_requests',
+        name='Transaction Requests',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='my_transaction_requests',
+        name='My Transaction Requests',
+        content_type=content_type,
+    )
+    
+    Permission.objects.create(
+        codename='airtime_request',
+        name='Airtime Request',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='approval_airtime',
+        name='Approval Airtime',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='airtime_requests',
+        name='Airtime Requests',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='my_airtime_requests',
+        name='My Airtime Requests',
+        content_type=content_type,
+    )
+    
+    Permission.objects.create(
+        codename='package_request',
+        name='Package Request',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='approval_package',
+        name='Approval Package',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='package_requests',
+        name='Package Requests',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='my_package_requests',
+        name='My Package Requests',
         content_type=content_type,
     )
 
