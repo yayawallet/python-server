@@ -135,7 +135,7 @@ async def airtime_requests(request):
     ).exclude(
         Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
     ).all())()
-    paginated_response = get_paginated_response(request, queryset)
+    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
     return JsonResponse(paginated_response)
 
 
@@ -147,7 +147,7 @@ async def airtime_my_requests(request):
         requesting_user__id=logged_in_user_profile.id,
         request_type=Requests.get('AIRTIME')
     ).all())()
-    paginated_response = get_paginated_response(request, queryset)
+    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
     return JsonResponse(paginated_response)
 
 @async_permission_required('auth.package_request', raise_exception=True)
@@ -271,7 +271,7 @@ async def package_requests(request):
     ).exclude(
         Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
     ).all())()
-    paginated_response = get_paginated_response(request, queryset)
+    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
     return JsonResponse(paginated_response)
 
 
@@ -283,7 +283,7 @@ async def package_my_requests(request):
         requesting_user__id=logged_in_user_profile.id,
         request_type=Requests.get('PACKAGE')
     ).all())()
-    paginated_response = get_paginated_response(request, queryset)
+    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
     return JsonResponse(paginated_response)
 
 @api_view(['GET'])
