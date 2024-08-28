@@ -26,7 +26,6 @@ async def airtime_request(request):
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('AIRTIME'), 
     )
-    await sync_to_async(instance.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -35,6 +34,9 @@ async def airtime_request(request):
         user__id__in=approvers_user_ids,
         user__userprofile__api_key=logged_in_user_profile.api_key
     ).count())()
+
+    await sync_to_async(instance.approvers.add)(*approvers)
+    await sync_to_async(instance.save)()
 
     if approvers_count == 0:
         response = await airtime.buy_airtime(
@@ -162,7 +164,6 @@ async def package_request(request):
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('PACKAGE'), 
     )
-    await sync_to_async(instance.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -171,6 +172,9 @@ async def package_request(request):
         user__id__in=approvers_user_ids,
         user__userprofile__api_key=logged_in_user_profile.api_key
     ).count())()
+
+    await sync_to_async(instance.approvers.add)(*approvers)
+    await sync_to_async(instance.save)()
 
     if approvers_count == 0:
         response = await airtime.buy_package(

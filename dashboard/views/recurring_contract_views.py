@@ -39,7 +39,6 @@ async def contract_request(request):
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('CONTRACT'), 
     )
-    await sync_to_async(instance.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -48,6 +47,9 @@ async def contract_request(request):
         user__id__in=approvers_user_ids,
         user__userprofile__api_key=logged_in_user_profile.api_key
     ).count())()
+
+    await sync_to_async(instance.approvers.add)(*approvers)
+    await sync_to_async(instance.save)()
 
     if approvers_count == 0:
         response = await recurring_contract.create_contract(
@@ -178,7 +180,6 @@ async def payment_request(request):
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('REQUEST_PAYMENT'), 
     )
-    await sync_to_async(instance.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -187,6 +188,9 @@ async def payment_request(request):
         user__id__in=approvers_user_ids,
         user__userprofile__api_key=logged_in_user_profile.api_key
     ).count())()
+
+    await sync_to_async(instance.approvers.add)(*approvers)
+    await sync_to_async(instance.save)()
 
     if approvers_count == 0:
         response = await recurring_contract.request_payment(
@@ -385,7 +389,6 @@ async def bulk_contract_import_request(request):
         file=uploaded_file, 
         remark=request.POST.get('remark'), 
     )
-    await sync_to_async(instance.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -394,6 +397,9 @@ async def bulk_contract_import_request(request):
         user__id__in=approvers_user_ids,
         user__userprofile__api_key=logged_in_user_profile.api_key
     ).count())()
+
+    await sync_to_async(instance.approvers.add)(*approvers)
+    await sync_to_async(instance.save)()
 
     if approvers_count == 0:
         instance = ImportedDocuments(
@@ -570,7 +576,6 @@ async def bulk_import_payment_request(request):
         file=uploaded_file, 
         remark=request.POST.get('remark'), 
     )
-    await sync_to_async(instance.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -579,6 +584,9 @@ async def bulk_import_payment_request(request):
         user__id__in=approvers_user_ids,
         user__userprofile__api_key=logged_in_user_profile.api_key
     ).count())()
+
+    await sync_to_async(instance.approvers.add)(*approvers)
+    await sync_to_async(instance.save)()
 
     if approvers_count == 0:
         instance = ImportedDocuments(
