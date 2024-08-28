@@ -11,7 +11,7 @@ from ..permisssions.async_permission import async_permission_required
 import pandas as pd
 from dashboard.tasks import import_contract_rows, import_recurring_payment_request_rows
 from python_server.celery import app
-from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile, get_logged_in_user_profile_instance, get_paginated_response
+from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile, get_logged_in_user_profile_instance, get_paginated_response, add_approver_sync
 import jwt
 from django.contrib.auth.models import User, Group
 from ..models import ActionTrail, UserProfile
@@ -43,14 +43,14 @@ async def contract_request(request):
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
     approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
-    approver_objects = await sync_to_async(lambda: UserProfile.objects.filter(
+    approver_user_profiles = await sync_to_async(lambda: UserProfile.objects.filter(
         user__id__in=approvers_user_ids,
         user__userprofile__api_key=logged_in_user_profile.api_key
     ))()
-    approvers_count = await sync_to_async(approver_objects.count)()
+    approver_objects = await sync_to_async(lambda: [approver_user_profile.user for approver_user_profile in approver_user_profiles])()
+    approvers_count = await sync_to_async(approver_user_profiles.count)()
 
-    await sync_to_async(instance.approvers.add)(*approver_objects)
-    await sync_to_async(instance.save)()
+    await sync_to_async(add_approver_sync)(instance, approver_objects)
 
     if approvers_count == 0:
         response = await recurring_contract.create_contract(
@@ -185,14 +185,14 @@ async def payment_request(request):
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
     approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
-    approver_objects = await sync_to_async(lambda: UserProfile.objects.filter(
+    approver_user_profiles = await sync_to_async(lambda: UserProfile.objects.filter(
         user__id__in=approvers_user_ids,
         user__userprofile__api_key=logged_in_user_profile.api_key
     ))()
-    approvers_count = await sync_to_async(approver_objects.count)()
+    approver_objects = await sync_to_async(lambda: [approver_user_profile.user for approver_user_profile in approver_user_profiles])()
+    approvers_count = await sync_to_async(approver_user_profiles.count)()
 
-    await sync_to_async(instance.approvers.add)(*approver_objects)
-    await sync_to_async(instance.save)()
+    await sync_to_async(add_approver_sync)(instance, approver_objects)
 
     if approvers_count == 0:
         response = await recurring_contract.request_payment(
@@ -395,14 +395,14 @@ async def bulk_contract_import_request(request):
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
     approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
-    approver_objects = await sync_to_async(lambda: UserProfile.objects.filter(
+    approver_user_profiles = await sync_to_async(lambda: UserProfile.objects.filter(
         user__id__in=approvers_user_ids,
         user__userprofile__api_key=logged_in_user_profile.api_key
     ))()
-    approvers_count = await sync_to_async(approver_objects.count)()
+    approver_objects = await sync_to_async(lambda: [approver_user_profile.user for approver_user_profile in approver_user_profiles])()
+    approvers_count = await sync_to_async(approver_user_profiles.count)()
 
-    await sync_to_async(instance.approvers.add)(*approver_objects)
-    await sync_to_async(instance.save)()
+    await sync_to_async(add_approver_sync)(instance, approver_objects)
 
     if approvers_count == 0:
         instance = ImportedDocuments(
@@ -583,14 +583,14 @@ async def bulk_import_payment_request(request):
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
     approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
-    approver_objects = await sync_to_async(lambda: UserProfile.objects.filter(
+    approver_user_profiles = await sync_to_async(lambda: UserProfile.objects.filter(
         user__id__in=approvers_user_ids,
         user__userprofile__api_key=logged_in_user_profile.api_key
     ))()
-    approvers_count = await sync_to_async(approver_objects.count)()
+    approver_objects = await sync_to_async(lambda: [approver_user_profile.user for approver_user_profile in approver_user_profiles])()
+    approvers_count = await sync_to_async(approver_user_profiles.count)()
 
-    await sync_to_async(instance.approvers.add)(*approver_objects)
-    await sync_to_async(instance.save)()
+    await sync_to_async(add_approver_sync)(instance, approver_objects)
 
     if approvers_count == 0:
         instance = ImportedDocuments(

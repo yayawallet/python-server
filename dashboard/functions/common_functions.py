@@ -79,3 +79,7 @@ def get_paginated_response(request, queryset):
       'total': paginator.count,
       'perPage': per_page
   }
+
+def add_approver_sync(instance, approver_objects): 
+  instance.approvers.add(*approver_objects)
+  instance.save()

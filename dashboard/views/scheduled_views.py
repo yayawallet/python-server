@@ -12,7 +12,7 @@ from dashboard.tasks import import_scheduled_rows
 from ..constants import ImportTypes, Requests
 import jwt
 from django.contrib.auth.models import User, Group
-from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile, get_logged_in_user_profile_instance, get_paginated_response
+from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile, get_logged_in_user_profile_instance, get_paginated_response, add_approver_sync
 from ..models import ActionTrail, UserProfile
 from ..constants import Actions, Approve, Reject
 from django.db.models import Q
@@ -36,14 +36,14 @@ async def schedule_request(request):
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
     approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
-    approver_objects = await sync_to_async(lambda: UserProfile.objects.filter(
+    approver_user_profiles = await sync_to_async(lambda: UserProfile.objects.filter(
         user__id__in=approvers_user_ids,
         user__userprofile__api_key=logged_in_user_profile.api_key
     ))()
-    approvers_count = await sync_to_async(approver_objects.count)()
+    approver_objects = await sync_to_async(lambda: [approver_user_profile.user for approver_user_profile in approver_user_profiles])()
+    approvers_count = await sync_to_async(approver_user_profiles.count)()
 
-    await sync_to_async(instance.approvers.add)(*approver_objects)
-    await sync_to_async(instance.save)()
+    await sync_to_async(add_approver_sync)(instance, approver_objects)
 
     if approvers_count == 0:
         response = await scheduled.create(
@@ -226,14 +226,14 @@ async def bulk_schedule_import_request(request):
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
     approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
-    approver_objects = await sync_to_async(lambda: UserProfile.objects.filter(
+    approver_user_profiles = await sync_to_async(lambda: UserProfile.objects.filter(
         user__id__in=approvers_user_ids,
         user__userprofile__api_key=logged_in_user_profile.api_key
     ))()
-    approvers_count = await sync_to_async(approver_objects.count)()
+    approver_objects = await sync_to_async(lambda: [approver_user_profile.user for approver_user_profile in approver_user_profiles])()
+    approvers_count = await sync_to_async(approver_user_profiles.count)()
 
-    await sync_to_async(instance.approvers.add)(*approver_objects)
-    await sync_to_async(instance.save)()
+    await sync_to_async(add_approver_sync)(instance, approver_objects)
 
     if approvers_count == 0:
         instance = ImportedDocuments(
