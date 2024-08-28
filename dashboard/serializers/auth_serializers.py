@@ -9,7 +9,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['user_id'] = user.id
         token['username'] = user.username
         token['roles'] = list(user.groups.values_list('name', flat=True))
-        token['permissions'] = list(user.get_group_permissions())
         
         return token
 
