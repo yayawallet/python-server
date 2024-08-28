@@ -2,6 +2,7 @@ import jwt
 import json
 from ..models import User, UserProfile
 from django.core.paginator import Paginator
+from ..serializers.serializers import ApprovalRequestSerializer
 
 def get_logged_in_user(request):
   auth_header = request.headers.get('Authorization')
@@ -68,7 +69,8 @@ def get_paginated_response(request, queryset):
   page_number = request.GET.get('page', 1)
   page_obj = paginator.get_page(page_number)
 
-  data = list(page_obj.object_list.values())
+  serializer = ApprovalRequestSerializer(page_obj.object_list, many=True)
+  data = serializer.data
 
   return {
       'data': data,
