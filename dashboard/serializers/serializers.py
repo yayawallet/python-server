@@ -37,7 +37,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer()
     class Meta:
         model = UserProfile 
-        fields = ['phone']
+        fields = ['phone', 'user']
 
 class BillSerializer(serializers.ModelSerializer):
     class Meta:
