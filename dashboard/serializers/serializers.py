@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from ..models import Scheduled, Contract, FailedImports, ImportedDocuments, RecurringPaymentRequest, UserProfile, Bill, Payout, ApprovalRequest
+from ..models import Scheduled, Contract, FailedImports, ImportedDocuments, RecurringPaymentRequest, UserProfile, Bill, Payout, ApprovalRequest, RejectedRequest
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -49,10 +49,16 @@ class PayoutSerializer(serializers.ModelSerializer):
         model = Payout
         fields = '__all__'
 
+class RejectedRequestSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+    class Meta:
+        model = RejectedRequest
+        fields = ['user', 'rejection_reason']
+
 class ApprovalRequestSerializer(serializers.ModelSerializer):
     requesting_user = UserProfileSerializer(many=False, read_only=True)
     approved_by = UserSerializer(many=True, read_only=True)
-    rejected_by = UserSerializer(many=True, read_only=True)
+    rejected_by = RejectedRequestSerializer(many=True, read_only=True)
     approvers = UserSerializer(many=True, read_only=True)
 
     class Meta:
