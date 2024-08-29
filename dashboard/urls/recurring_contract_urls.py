@@ -6,7 +6,6 @@ urlpatterns = [
     path('recurring-contract/contract-request', recurring_contract_views.contract_request, name='contract-request'),
     path('recurring-contract/submit-contract-response', recurring_contract_views.submit_contract_response, name='submit-contract-response'),
     path('recurring-contract/contract-requests', recurring_contract_views.contract_requests, name='contract-requests'),
-    path('recurring-contract/contract-my-requests', recurring_contract_views.contract_my_requests, name='contract-my-requests'),
     path('recurring-contract/payment-request', recurring_contract_views.payment_request, name='payment-request'),
     path('recurring-contract/submit-payment-request-response', recurring_contract_views.submit_payment_request_response, name='submit-payment-request-response'),
     path('recurring-contract/payment-requests', recurring_contract_views.payment_requests, name='payment-requests'),
@@ -20,9 +19,7 @@ urlpatterns = [
     path('recurring-contract/bulk-contract-import-request', recurring_contract_views.bulk_contract_import_request, name='bulk_contract_import_request'),
     path('recurring-contract/submit-bulk-contract-response', recurring_contract_views.submit_bulk_contract_response, name='submit-bulk-contract-response'),
     path('recurring-contract/contract-bulk-requests', recurring_contract_views.contract_bulk_requests, name='contract-bulk-requests'),
-    path('recurring-contract/contract-my-bulk-requests', recurring_contract_views.contract_my_bulk_requests, name='contract-my-bulk-requests'),
     path('recurring-contract/bulk-import-payment-request', recurring_contract_views.bulk_import_payment_request, name='bulk-import-payment-request'),
     path('recurring-contract/submit-bulk-payment-request-response', recurring_contract_views.submit_bulk_payment_request_response, name='submit-bulk-payment-request-response'),
     path('recurring-contract/request-payment-bulk-requests', recurring_contract_views.request_payment_bulk_requests, name='request-payment-bulk-requests'),
-    path('recurring-contract/my-bulk-payment-requests', recurring_contract_views.my_bulk_payment_requests, name='my-bulk-payment-requests'),
 ]

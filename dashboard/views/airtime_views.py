@@ -26,6 +26,7 @@ async def airtime_request(request):
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('AIRTIME'), 
     )
+    await sync_to_async(instance.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -132,26 +133,24 @@ def get_single_approval_request_serialized_data(db_results):
 async def airtime_requests(request):
     logged_in_user=await sync_to_async(get_logged_in_user)(request)
     logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
-    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
-        requesting_user__api_key=logged_in_user_profile.api_key,
-        request_type=Requests.get('AIRTIME')
-    ).exclude(
-        Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
-    ).all())()
-    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
-    return JsonResponse(paginated_response)
+    
+    approver_group = await sync_to_async(Group.objects.get)(name='Approver')
+    is_approver = await sync_to_async(lambda: logged_in_user.groups.filter(id=approver_group.id).exists())()
 
-
-@async_permission_required('auth.my_airtime_requests', raise_exception=True)
-@api_view(['GET'])
-async def airtime_my_requests(request):
-    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
-    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
-        requesting_user__id=logged_in_user_profile.id,
-        request_type=Requests.get('AIRTIME')
-    ).all())()
-    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
-    return JsonResponse(paginated_response)
+    if not is_approver:
+        queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+            requesting_user__id=logged_in_user_profile.id,
+            request_type=Requests.get('AIRTIME')
+        ).all())()
+        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        return JsonResponse(paginated_response)
+    else:
+        queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+            requesting_user__api_key=logged_in_user_profile.api_key,
+            request_type=Requests.get('AIRTIME')
+        ).all())()
+        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        return JsonResponse(paginated_response) 
 
 @async_permission_required('auth.package_request', raise_exception=True)
 @api_view(['POST'])
@@ -165,6 +164,7 @@ async def package_request(request):
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('PACKAGE'), 
     )
+    await sync_to_async(instance.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -271,26 +271,25 @@ def get_single_approval_request_serialized_data(db_results):
 async def package_requests(request):
     logged_in_user=await sync_to_async(get_logged_in_user)(request)
     logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
-    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
-        requesting_user__api_key=logged_in_user_profile.api_key,
-        request_type=Requests.get('PACKAGE')
-    ).exclude(
-        Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
-    ).all())()
-    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
-    return JsonResponse(paginated_response)
 
+    approver_group = await sync_to_async(Group.objects.get)(name='Approver')
+    is_approver = await sync_to_async(lambda: logged_in_user.groups.filter(id=approver_group.id).exists())()
 
-@async_permission_required('auth.my_package_requests', raise_exception=True)
-@api_view(['GET'])
-async def package_my_requests(request):
-    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
-    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
-        requesting_user__id=logged_in_user_profile.id,
-        request_type=Requests.get('PACKAGE')
-    ).all())()
-    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
-    return JsonResponse(paginated_response)
+    if not is_approver:
+        queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+            requesting_user__id=logged_in_user_profile.id,
+            request_type=Requests.get('PACKAGE')
+        ).all())()
+        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        return JsonResponse(paginated_response)
+    else:
+        queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+            requesting_user__api_key=logged_in_user_profile.api_key,
+            request_type=Requests.get('PACKAGE')
+        ).all())()
+        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        return JsonResponse(paginated_response)
+    
 
 @api_view(['GET'])
 async def proxy_list_recharges(request):

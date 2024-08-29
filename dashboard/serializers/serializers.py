@@ -2,6 +2,12 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from ..models import Scheduled, Contract, FailedImports, ImportedDocuments, RecurringPaymentRequest, UserProfile, Bill, Payout, ApprovalRequest
 
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'first_name', 'last_name']
+
 class ImportedDocumentsSerializer(serializers.ModelSerializer):
     class Meta:
         model = ImportedDocuments 
@@ -28,6 +34,7 @@ class RecurringPaymentRequestSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
     class Meta:
         model = UserProfile 
         fields = '__all__'
@@ -42,13 +49,8 @@ class PayoutSerializer(serializers.ModelSerializer):
         model = Payout
         fields = '__all__'
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'first_name', 'last_name']
-
 class ApprovalRequestSerializer(serializers.ModelSerializer):
-    requesting_user = UserSerializer(many=False, read_only=True)
+    requesting_user = UserProfileSerializer(many=False, read_only=True)
     approved_by = UserSerializer(many=True, read_only=True)
     rejected_by = UserSerializer(many=True, read_only=True)
     approvers = UserSerializer(many=True, read_only=True)

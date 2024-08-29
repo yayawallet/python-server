@@ -129,12 +129,6 @@ def create_custom_permissions(apps, schema_editor):
     )
 
     Permission.objects.create(
-        codename='my_bulk_scheduled_requests',
-        name='My Bulk Scheduled Requests',
-        content_type=content_type,
-    )
-
-    Permission.objects.create(
         codename='approval_bulk_contract_import',
         name='Approval Bulk Contract Import',
         content_type=content_type,
@@ -149,12 +143,6 @@ def create_custom_permissions(apps, schema_editor):
     Permission.objects.create(
         codename='bulk_contract_requests',
         name='Bulk Contract Requests',
-        content_type=content_type,
-    )
-
-    Permission.objects.create(
-        codename='my_bulk_contract_requests',
-        name='My Bulk Contract Requests',
         content_type=content_type,
     )
     
@@ -177,12 +165,6 @@ def create_custom_permissions(apps, schema_editor):
     )
 
     Permission.objects.create(
-        codename='my_bulk_payment_requests',
-        name='My Bulk Payment Requests',
-        content_type=content_type,
-    )
-
-    Permission.objects.create(
         codename='schedule_request',
         name='Schedule Request',
         content_type=content_type,
@@ -197,12 +179,6 @@ def create_custom_permissions(apps, schema_editor):
     Permission.objects.create(
         codename='scheduled_requests',
         name='Scheduled Requests',
-        content_type=content_type,
-    )
-
-    Permission.objects.create(
-        codename='my_scheduled_requests',
-        name='My Scheduled Requests',
         content_type=content_type,
     )
 
@@ -225,12 +201,6 @@ def create_custom_permissions(apps, schema_editor):
     )
 
     Permission.objects.create(
-        codename='my_contract_requests',
-        name='My Contract Requests',
-        content_type=content_type,
-    )
-
-    Permission.objects.create(
         codename='payment_request',
         name='Payment Request',
         content_type=content_type,
@@ -245,12 +215,6 @@ def create_custom_permissions(apps, schema_editor):
     Permission.objects.create(
         codename='payment_requests',
         name='Payment Requests',
-        content_type=content_type,
-    )
-
-    Permission.objects.create(
-        codename='my_payment_requests',
-        name='My Payment Requests',
         content_type=content_type,
     )
 
@@ -271,12 +235,6 @@ def create_custom_permissions(apps, schema_editor):
         name='Transaction Requests',
         content_type=content_type,
     )
-
-    Permission.objects.create(
-        codename='my_transaction_requests',
-        name='My Transaction Requests',
-        content_type=content_type,
-    )
     
     Permission.objects.create(
         codename='airtime_request',
@@ -295,12 +253,6 @@ def create_custom_permissions(apps, schema_editor):
         name='Airtime Requests',
         content_type=content_type,
     )
-
-    Permission.objects.create(
-        codename='my_airtime_requests',
-        name='My Airtime Requests',
-        content_type=content_type,
-    )
     
     Permission.objects.create(
         codename='package_request',
@@ -317,12 +269,6 @@ def create_custom_permissions(apps, schema_editor):
     Permission.objects.create(
         codename='package_requests',
         name='Package Requests',
-        content_type=content_type,
-    )
-
-    Permission.objects.create(
-        codename='my_package_requests',
-        name='My Package Requests',
         content_type=content_type,
     )
 
