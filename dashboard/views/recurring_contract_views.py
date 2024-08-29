@@ -39,6 +39,7 @@ async def contract_request(request):
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('CONTRACT'), 
     )
+    await sync_to_async(instance.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -149,25 +150,24 @@ def get_single_approval_request_serialized_data(db_results):
 async def contract_requests(request):
     logged_in_user=await sync_to_async(get_logged_in_user)(request)
     logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
-    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
-        requesting_user__api_key=logged_in_user_profile.api_key,
-        request_type=Requests.get('CONTRACT')
-    ).exclude(
-        Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
-    ).all())()
-    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
-    return JsonResponse(paginated_response)
 
-@async_permission_required('auth.my_contract_requests', raise_exception=True)
-@api_view(['GET'])
-async def contract_my_requests(request):
-    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
-    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
-        requesting_user__id=logged_in_user_profile.id,
-        request_type=Requests.get('CONTRACT')
-    ).all())()
-    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
-    return JsonResponse(paginated_response)
+    approver_group = await sync_to_async(Group.objects.get)(name='Approver')
+    is_approver = await sync_to_async(lambda: logged_in_user.groups.filter(id=approver_group.id).exists())()
+
+    if not is_approver:
+        queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+            requesting_user__id=logged_in_user_profile.id,
+            request_type=Requests.get('CONTRACT')
+        ).all())()
+        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        return JsonResponse(paginated_response)
+    else:
+        queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+            requesting_user__api_key=logged_in_user_profile.api_key,
+            request_type=Requests.get('CONTRACT')
+        ).all())()
+        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        return JsonResponse(paginated_response)
 
 @async_permission_required('auth.payment_request', raise_exception=True)
 @api_view(['POST'])
@@ -181,6 +181,7 @@ async def payment_request(request):
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('REQUEST_PAYMENT'), 
     )
+    await sync_to_async(instance.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -295,26 +296,30 @@ def get_single_approval_request_serialized_data(db_results):
 async def payment_requests(request):
     logged_in_user=await sync_to_async(get_logged_in_user)(request)
     logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
-    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
-        requesting_user__api_key=logged_in_user_profile.api_key,
-        request_type=Requests.get('REQUEST_PAYMENT')
-    ).exclude(
-        Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
-    ).all())()
-    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
-    return JsonResponse(paginated_response)
 
+    approver_group = await sync_to_async(Group.objects.get)(name='Approver')
+    is_approver = await sync_to_async(lambda: logged_in_user.groups.filter(id=approver_group.id).exists())()
+
+    if not is_approver:
+        queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+            requesting_user__id=logged_in_user_profile.id,
+            request_type=Requests.get('REQUEST_PAYMENT')
+        ).all())()
+        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        return JsonResponse(paginated_response)
+    else:
+        queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+            requesting_user__api_key=logged_in_user_profile.api_key,
+            request_type=Requests.get('REQUEST_PAYMENT')
+        ).all())()
+        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        return JsonResponse(paginated_response)
 
 @async_permission_required('auth.my_payment_requests', raise_exception=True)
 @api_view(['GET'])
 async def payment_my_requests(request):
     logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
-    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
-        requesting_user__id=logged_in_user_profile.id,
-        request_type=Requests.get('REQUEST_PAYMENT')
-    ).all())()
-    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
-    return JsonResponse(paginated_response)
+    
 
 @api_view(['GET'])
 async def proxy_get_subscriptions(request):
@@ -391,6 +396,7 @@ async def bulk_contract_import_request(request):
         file=uploaded_file, 
         remark=request.POST.get('remark'), 
     )
+    await sync_to_async(instance.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -520,25 +526,24 @@ def get_single_approval_request_serialized_data(db_results):
 async def contract_bulk_requests(request):
     logged_in_user=await sync_to_async(get_logged_in_user)(request)
     logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
-    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
-        requesting_user__api_key=logged_in_user_profile.api_key,
-        request_type=Requests.get('CONTRACT_BULK_IMPORT')
-    ).exclude(
-        Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
-    ).all())()
-    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
-    return JsonResponse(paginated_response)
 
-@async_permission_required('auth.my_bulk_contract_requests', raise_exception=True)
-@api_view(['GET'])
-async def contract_my_bulk_requests(request):
-    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
-    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
-        requesting_user__id=logged_in_user_profile.id,
-        request_type=Requests.get('CONTRACT_BULK_IMPORT')
-    ).all())()
-    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
-    return JsonResponse(paginated_response)
+    approver_group = await sync_to_async(Group.objects.get)(name='Approver')
+    is_approver = await sync_to_async(lambda: logged_in_user.groups.filter(id=approver_group.id).exists())()
+
+    if not is_approver:
+        queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+            requesting_user__id=logged_in_user_profile.id,
+            request_type=Requests.get('CONTRACT_BULK_IMPORT')
+        ).all())()
+        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        return JsonResponse(paginated_response)  
+    else:
+        queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+            requesting_user__api_key=logged_in_user_profile.api_key,
+            request_type=Requests.get('CONTRACT_BULK_IMPORT')
+        ).all())()
+        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        return JsonResponse(paginated_response)
 
 @async_permission_required('auth.bulk_payment_request', raise_exception=True)
 @api_view(['POST'])
@@ -579,6 +584,7 @@ async def bulk_import_payment_request(request):
         file=uploaded_file, 
         remark=request.POST.get('remark'), 
     )
+    await sync_to_async(instance.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -707,34 +713,21 @@ def get_single_approval_request_serialized_data(db_results):
 async def request_payment_bulk_requests(request):
     logged_in_user=await sync_to_async(get_logged_in_user)(request)
     logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
-    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
-        requesting_user__api_key=logged_in_user_profile.api_key,
-        request_type=Requests.get('REQUEST_PAYMENT_BULK_IMPORT')
-    ).exclude(
-        Q(approved_by=logged_in_user) | Q(rejected_by__user=logged_in_user)
-    ).all())()
-    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
-    return JsonResponse(paginated_response)
 
-@async_permission_required('auth.my_bulk_payment_requests', raise_exception=True)
-@api_view(['GET'])
-async def my_bulk_payment_requests(request):
-    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
-    queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
-        requesting_user__id=logged_in_user_profile.id,
-        request_type=Requests.get('REQUEST_PAYMENT_BULK_IMPORT')
-    ).all())()
-    paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
-    return JsonResponse(paginated_response)
+    approver_group = await sync_to_async(Group.objects.get)(name='Approver')
+    is_approver = await sync_to_async(lambda: logged_in_user.groups.filter(id=approver_group.id).exists())()
 
-
-
-
-
-
-
-
-
-
-
-
+    if not is_approver:
+        queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+            requesting_user__id=logged_in_user_profile.id,
+            request_type=Requests.get('REQUEST_PAYMENT_BULK_IMPORT')
+        ).all())()
+        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        return JsonResponse(paginated_response)
+    else:
+        queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+            requesting_user__api_key=logged_in_user_profile.api_key,
+            request_type=Requests.get('REQUEST_PAYMENT_BULK_IMPORT')
+        ).all())()
+        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        return JsonResponse(paginated_response)
