@@ -189,6 +189,7 @@ class Migration(migrations.Migration):
                 ('approved_by', models.ManyToManyField(blank=True, related_name='approved_requests', to=settings.AUTH_USER_MODEL)),
                 ('rejected_by', models.ManyToManyField(blank=True, related_name='rejected_requests', to='dashboard.rejectedrequest')),
                 ('requesting_user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='dashboard.userprofile')),
+                ('is_successful', models.BooleanField(null=True, blank=True)),
             ],
         ),
         migrations.CreateModel(
