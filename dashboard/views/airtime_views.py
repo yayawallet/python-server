@@ -21,12 +21,12 @@ async def airtime_request(request):
     logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
     data = request.data
 
-    instance = ApprovalRequest(
+    approval_request = ApprovalRequest(
         request_json=json.dumps(data),
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('AIRTIME'), 
     )
-    await sync_to_async(instance.save)()
+    await sync_to_async(approval_request.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -38,7 +38,7 @@ async def airtime_request(request):
     approver_objects = await sync_to_async(lambda: [approver_user_profile.user for approver_user_profile in approver_user_profiles])()
     approvers_count = await sync_to_async(approver_user_profiles.count)()
 
-    await sync_to_async(add_approver_sync)(instance, approver_objects)
+    await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
     if approvers_count == 0:
         response = await airtime.buy_airtime(
@@ -56,8 +56,12 @@ async def airtime_request(request):
                 action_type=Actions.get("AIRTIME")
             )
             await sync_to_async(instance.save)()
+            approval_request.is_successful = True
+            await sync_to_async(approval_request.save)()
             return JsonResponse(parsed_data, safe=False)
-            
+        
+        approval_request.is_successful = False
+        await sync_to_async(approval_request.save)()  
         return stream_response(response)
 
     return JsonResponse({"message": "Airtime Request created!!"}, safe=False)
@@ -72,6 +76,15 @@ async def submit_airtime_response(request):
     logged_in_user_profile = await sync_to_async(get_logged_in_user_profile)(request)
     approval_request = await sync_to_async(ApprovalRequest.objects.get)(uuid=request.POST.get('approval_request_id'))
     
+    is_approved = await sync_to_async(lambda: approval_request.approved_by.filter(id=logged_in_user.id).exists())()
+    is_rejected = await sync_to_async(lambda: approval_request.rejected_by.filter(user=logged_in_user).exists())()
+    
+    if is_approved:
+        return Response({"message": "User has already approved this request."}, status=400)
+    
+    if is_rejected:
+        return Response({"message": "User has already rejected this request."}, status=400)
+
     if request.POST.get('response') == Approve:
         await sync_to_async(approval_request.approved_by.add)(logged_in_user)
         await sync_to_async(approval_request.save)()
@@ -105,8 +118,12 @@ async def submit_airtime_response(request):
                     action_type=Actions.get("AIRTIME")
                 )
                 await sync_to_async(instance.save)()
+                approval_request.is_successful = True
+                await sync_to_async(approval_request.save)()
                 return JsonResponse(parsed_data, safe=False)
-                
+            
+            approval_request.is_successful = False
+            await sync_to_async(approval_request.save)()
             return stream_response(response)
         else:
             serialized_data = await sync_to_async(get_single_approval_request_serialized_data)(approval_request)
@@ -161,12 +178,12 @@ async def package_request(request):
     logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
     data = request.data
 
-    instance = ApprovalRequest(
+    approval_request = ApprovalRequest(
         request_json=json.dumps(data),
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('PACKAGE'), 
     )
-    await sync_to_async(instance.save)()
+    await sync_to_async(approval_request.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -178,7 +195,7 @@ async def package_request(request):
     approver_objects = await sync_to_async(lambda: [approver_user_profile.user for approver_user_profile in approver_user_profiles])()
     approvers_count = await sync_to_async(approver_user_profiles.count)()
 
-    await sync_to_async(add_approver_sync)(instance, approver_objects)
+    await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
     if approvers_count == 0:
         response = await airtime.buy_package(
@@ -196,8 +213,12 @@ async def package_request(request):
                 action_type=Actions.get("PACKAGE")
             )
             await sync_to_async(instance.save)()
+            approval_request.is_successful = True
+            await sync_to_async(approval_request.save)()
             return JsonResponse(parsed_data, safe=False)
-            
+        
+        approval_request.is_successful = False
+        await sync_to_async(approval_request.save)() 
         return stream_response(response)
 
     return JsonResponse({"message": "Package Request created!!"}, safe=False)
@@ -212,6 +233,15 @@ async def submit_package_response(request):
     logged_in_user_profile = await sync_to_async(get_logged_in_user_profile)(request)
     approval_request = await sync_to_async(ApprovalRequest.objects.get)(uuid=request.POST.get('approval_request_id'))
     
+    is_approved = await sync_to_async(lambda: approval_request.approved_by.filter(id=logged_in_user.id).exists())()
+    is_rejected = await sync_to_async(lambda: approval_request.rejected_by.filter(user=logged_in_user).exists())()
+    
+    if is_approved:
+        return Response({"message": "User has already approved this request."}, status=400)
+    
+    if is_rejected:
+        return Response({"message": "User has already rejected this request."}, status=400)
+
     if request.POST.get('response') == Approve:
         await sync_to_async(approval_request.approved_by.add)(logged_in_user)
         await sync_to_async(approval_request.save)()
@@ -245,8 +275,12 @@ async def submit_package_response(request):
                     action_type=Actions.get("PACKAGE")
                 )
                 await sync_to_async(instance.save)()
+                approval_request.is_successful = True
+                await sync_to_async(approval_request.save)()
                 return JsonResponse(parsed_data, safe=False)
-                
+            
+            approval_request.is_successful = False
+            await sync_to_async(approval_request.save)()
             return stream_response(response)
         else:
             serialized_data = await sync_to_async(get_single_approval_request_serialized_data)(approval_request)

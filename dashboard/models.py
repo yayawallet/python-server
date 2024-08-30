@@ -233,5 +233,6 @@ class ApprovalRequest(models.Model):
     rejected_by = models.ManyToManyField(RejectedRequest, related_name='rejected_requests', blank=True)
     approvers = models.ManyToManyField(User, related_name='approvers', blank=True)
     request_json = models.CharField(null=True, blank=True)
+    is_successful = models.BooleanField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
