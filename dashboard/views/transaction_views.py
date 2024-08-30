@@ -81,6 +81,7 @@ async def submit_transaction_response(request):
     token = auth_header.split(' ')[1]
     decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
     logged_in_user = await sync_to_async(User.objects.get)(id=decoded_token.get("user_id"))
+    logged_in_user_profile = await sync_to_async(get_logged_in_user_profile)(request)
     approval_request = await sync_to_async(ApprovalRequest.objects.get)(uuid=request.POST.get('approval_request_id'))
     
     if request.POST.get('response') == Approve:
@@ -100,19 +101,21 @@ async def submit_transaction_response(request):
 
         if approvers_count == approved_users_count:
             data = json.loads(approval_request.request_json)
+            meta_data = {}
             response = await transaction.create_transaction(
                 data.get('receiver'), 
                 data.get('amount'),
                 data.get('cause'),
-                data.get('meta_data'),
-                logged_in_user.api_key
+                meta_data,
+                logged_in_user_profile.api_key
                 )
             
             if response.status_code == 200 or response.status_code == 201:
                 parsed_data = parse_response(response)
+                requesting_user_object = await sync_to_async(lambda: approval_request.requesting_user.user)()
                 
                 instance = ActionTrail(
-                    user_id=approval_request.requesting_user, 
+                    user_id=requesting_user_object, 
                     action_id=parsed_data.get('id'), 
                     action_type=Actions.get("TRANSACTION")
                 )
