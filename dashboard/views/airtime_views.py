@@ -160,7 +160,7 @@ async def airtime_requests(request):
         queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
             requesting_user__id=logged_in_user_profile.id,
             request_type=Requests.get('AIRTIME')
-        ).order_by('-id').all())()
+        ).order_by('-updated_at').all())()
         paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
         return JsonResponse(paginated_response)
     else:
@@ -317,7 +317,7 @@ async def package_requests(request):
         queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
             requesting_user__id=logged_in_user_profile.id,
             request_type=Requests.get('PACKAGE')
-        ).order_by('-id').all())()
+        ).order_by('-updated_at').all())()
         paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
         return JsonResponse(paginated_response)
     else:
