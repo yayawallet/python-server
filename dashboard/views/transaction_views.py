@@ -51,6 +51,7 @@ async def transaction_request(request):
     await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
     if approvers_count == 0:
+        meta_data = {}
         response = await transaction.create_transaction(
             data.get('receiver'), 
             data.get('amount'),
@@ -175,14 +176,14 @@ async def transaction_requests(request):
         queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
             requesting_user__id=logged_in_user_profile.id,
             request_type=Requests.get('TRANSACTION')
-        ).all())()
+        ).order_by('-updated_at').all())()
         paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
         return JsonResponse(paginated_response)
     else:
         queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
             requesting_user__api_key=logged_in_user_profile.api_key,
             request_type=Requests.get('TRANSACTION')
-        ).all())()
+        ).order_by('-updated_at').all())()
         paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
         return JsonResponse(paginated_response)
 
