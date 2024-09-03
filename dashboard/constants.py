@@ -56,3 +56,4 @@ Requests = {
 
 Approve = "Approve"
 Reject = "Reject"
+Pending = "PENDING"

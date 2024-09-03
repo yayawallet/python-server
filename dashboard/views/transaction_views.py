@@ -2,17 +2,21 @@ from adrf.decorators import api_view
 from ..permisssions.async_permission import async_permission_required
 from yayawallet_python_sdk.api import transaction
 from .stream_response import stream_response
-from ..models import ActionTrail, ApprovalRequest, UserProfile, RejectedRequest
+from ..models import ActionTrail, ApprovalRequest, UserProfile, RejectedRequest, ApproverRule
 from asgiref.sync import sync_to_async
 from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile, get_logged_in_user_profile_instance, get_paginated_response, add_approver_sync
 from django.http.response import JsonResponse
 from rest_framework.response import Response
-from ..constants import Actions, Requests, Approve
+from ..constants import Actions, Requests, Approve, Pending
 import json
 import jwt
-from django.db.models import Q
+from django.db.models import Q, F
 from django.contrib.auth.models import User, Group
 from ..serializers.serializers import ApprovalRequestSerializer
+from django.db.models.functions import Cast
+from django.db.models.fields import IntegerField
+from django.db.models.fields.json import KeyTextTransform
+from django.core.exceptions import ObjectDoesNotExist
 
 @api_view(['GET'])
 async def proxy_get_transaction_list_by_user(request):
@@ -32,7 +36,7 @@ async def transaction_request(request):
     data = request.data
 
     approval_request = ApprovalRequest(
-        request_json=json.dumps(data),
+        request_json=data,
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('TRANSACTION'), 
     )
@@ -65,7 +69,7 @@ async def transaction_request(request):
             
             instance = ActionTrail(
                 user_id=await sync_to_async(get_logged_in_user)(request), 
-                action_id=parsed_data.get('id'), 
+                action_id=parsed_data.get('transaction_id'), 
                 action_type=Actions.get("TRANSACTION")
             )
             await sync_to_async(instance.save)()
@@ -114,7 +118,7 @@ async def submit_transaction_response(request):
         approved_users_count = await sync_to_async(approved_users.count)()
 
         if approvers_count == approved_users_count:
-            data = json.loads(approval_request.request_json)
+            data = approval_request.request_json
             meta_data = {}
             response = await transaction.create_transaction(
                 data.get('receiver'), 
@@ -126,11 +130,12 @@ async def submit_transaction_response(request):
             
             if response.status_code == 200 or response.status_code == 201:
                 parsed_data = parse_response(response)
+                print(parsed_data)
                 requesting_user_object = await sync_to_async(lambda: approval_request.requesting_user.user)()
                 
                 instance = ActionTrail(
                     user_id=requesting_user_object, 
-                    action_id=parsed_data.get('id'), 
+                    action_id=parsed_data.get('transaction_id'), 
                     action_type=Actions.get("TRANSACTION")
                 )
                 await sync_to_async(instance.save)()
@@ -180,10 +185,27 @@ async def transaction_requests(request):
         paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
         return JsonResponse(paginated_response)
     else:
-        queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+        get_pending = request.GET.get('status') == Pending
+
+        approve_threshold = 0
+        try:
+            approver_rule = await sync_to_async(ApproverRule.objects.get)(user=logged_in_user_profile)
+            approve_threshold = approver_rule.approve_threshold
+        except ObjectDoesNotExist:
+            pass
+
+        base_queryset = await sync_to_async(lambda: ApprovalRequest.objects.annotate(
+            amount_value=Cast(KeyTextTransform('amount', 'request_json'), IntegerField())
+        ).filter(
             requesting_user__api_key=logged_in_user_profile.api_key,
-            request_type=Requests.get('TRANSACTION')
+            request_type=Requests.get('TRANSACTION'),
+            amount_value__gte=approve_threshold
         ).order_by('-updated_at').all())()
+
+        if get_pending:
+            queryset = await sync_to_async(lambda: [req for req in base_queryset if not req.rejected_by.exists() and logged_in_user not in req.approved_by.all()])()
+        else:
+            queryset = base_queryset
         paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
         return JsonResponse(paginated_response)
 
