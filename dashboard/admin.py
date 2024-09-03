@@ -124,10 +124,22 @@ class ApproverRuleAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         approver_group = Group.objects.get(name='Approver')
-        self.fields['user'].queryset = UserProfile.objects.filter(user__groups=approver_group)
+        self.fields['user'].queryset = UserProfile.objects.filter(
+            user__groups=approver_group
+        )
 
 class ApproverRuleAdmin(admin.ModelAdmin):
     form = ApproverRuleAdminForm
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        user = request.user
+        api_key = user.userprofile.api_key
+        if user.is_superuser:
+            return qs
+        elif request.user.groups.filter(name='Admin').exists():
+            return qs.filter(user__api_key=api_key).exclude(user__user__is_superuser=True)
+        return qs.none()
 
 admin.site.unregister(User)
 admin.site.register(User, AccountsUserAdmin)
