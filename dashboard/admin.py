@@ -3,8 +3,9 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as AuthUserAdmin
 from django.contrib.auth.models import User
-from .models import UserProfile, ApiKey, ActionTrail
-import os
+from .models import UserProfile, ApiKey, ActionTrail, ApproverRule
+from django.contrib.auth.models import Group
+from django import forms
 from .forms.custom_user_change_form import CustomUserChangeForm
 
 class UserProfileStaffInline(admin.StackedInline):
@@ -14,7 +15,7 @@ class UserProfileStaffInline(admin.StackedInline):
 class UserProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False
-    fields = ('country', 'address', 'region', 'phone', 'date_of_birth', 'profile_image', 'id_image')  # Exclude 'api_key'
+    fields = ('country', 'address', 'region', 'phone', 'date_of_birth', 'profile_image', 'id_image')
     
 class AccountsUserAdmin(AuthUserAdmin):
     form = CustomUserChangeForm
@@ -114,8 +115,34 @@ class ActionTrailAdmin(admin.ModelAdmin):
         elif request.user.groups.filter(name='Admin').exists():
             return qs.filter(user_id__userprofile__api_key=api_key).exclude(user_id__is_superuser=True)
         return qs.none()
+    
+class ApproverRuleAdminForm(forms.ModelForm):
+    class Meta:
+        model = ApproverRule
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        approver_group = Group.objects.get(name='Approver')
+        self.fields['user'].queryset = UserProfile.objects.filter(
+            user__groups=approver_group
+        )
+
+class ApproverRuleAdmin(admin.ModelAdmin):
+    form = ApproverRuleAdminForm
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        user = request.user
+        api_key = user.userprofile.api_key
+        if user.is_superuser:
+            return qs
+        elif request.user.groups.filter(name='Admin').exists():
+            return qs.filter(user__api_key=api_key).exclude(user__user__is_superuser=True)
+        return qs.none()
 
 admin.site.unregister(User)
 admin.site.register(User, AccountsUserAdmin)
 admin.site.register(ApiKey)
+admin.site.register(ApproverRule, ApproverRuleAdmin)
 admin.site.register(ActionTrail, ActionTrailAdmin)

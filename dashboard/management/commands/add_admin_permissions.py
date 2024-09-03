@@ -20,6 +20,10 @@ class Command(BaseCommand):
         delete_userprofile = Permission.objects.get(codename="delete_userprofile")
         view_userprofile = Permission.objects.get(codename="view_userprofile")
         view_actiontrail = Permission.objects.get(codename="view_actiontrail")
+        add_approverrule = Permission.objects.get(codename="add_approverrule")
+        change_approverrule = Permission.objects.get(codename="change_approverrule")
+        delete_approverrule = Permission.objects.get(codename="delete_approverrule")
+        view_approverrule = Permission.objects.get(codename="view_approverrule")
         
         group.permissions.add(view_group)
         group.permissions.add(view_permission)
@@ -32,5 +36,9 @@ class Command(BaseCommand):
         group.permissions.add(delete_userprofile)
         group.permissions.add(view_userprofile)
         group.permissions.add(view_actiontrail)
+        group.permissions.add(add_approverrule)
+        group.permissions.add(change_approverrule)
+        group.permissions.add(delete_approverrule)
+        group.permissions.add(view_approverrule)
 
         self.stdout.write(self.style.SUCCESS('Successfully added permissions to Admin group'))

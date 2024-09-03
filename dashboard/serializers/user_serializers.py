@@ -13,7 +13,6 @@ class ChangePasswordSerializer(serializers.Serializer):
         return value
 
     def validate_new_password(self, value):
-        # Optionally, add custom validation for the new password
         return value
 
     def save(self):
