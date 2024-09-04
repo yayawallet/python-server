@@ -101,29 +101,57 @@ async def submit_airtime_response(request):
 
         if approvers_count == approved_users_count:
             data = approval_request.request_json
-            response = await airtime.buy_airtime(
-                data.get('phone'), 
-                data.get('amount'),
-                logged_in_user_profile.api_key
-                )
-            
-            if response.status_code == 200 or response.status_code == 201:
-                parsed_data = parse_response(response)
-                requesting_user_object = await sync_to_async(lambda: approval_request.requesting_user.user)()
+            if approval_request.request_type == Requests.get('AIRTIME'):
+                response = await airtime.buy_airtime(
+                    data.get('phone'), 
+                    data.get('amount'),
+                    logged_in_user_profile.api_key
+                    )
                 
-                instance = ActionTrail(
-                    user_id=requesting_user_object, 
-                    action_id=parsed_data.get('id'), 
-                    action_type=Actions.get("AIRTIME")
-                )
-                await sync_to_async(instance.save)()
-                approval_request.is_successful = True
-                await sync_to_async(approval_request.save)()
-                return JsonResponse(parsed_data, safe=False)
+                if response.status_code == 200 or response.status_code == 201:
+                    parsed_data = parse_response(response)
+                    requesting_user_object = await sync_to_async(lambda: approval_request.requesting_user.user)()
+                    
+                    instance = ActionTrail(
+                        user_id=requesting_user_object, 
+                        action_id=parsed_data.get('id'), 
+                        action_type=Actions.get("AIRTIME")
+                    )
+                    await sync_to_async(instance.save)()
+                    approval_request.is_successful = True
+                    await sync_to_async(approval_request.save)()
+                    return JsonResponse(parsed_data, safe=False)
             
-            approval_request.is_successful = False
-            await sync_to_async(approval_request.save)()
-            return stream_response(response)
+                approval_request.is_successful = False
+                await sync_to_async(approval_request.save)()
+                return stream_response(response)
+            
+            elif approval_request.request_type == Requests.get('PACKAGE'):
+                response = await airtime.buy_package(
+                    data.get('phone'), 
+                    data.get('package'),
+                    logged_in_user_profile.api_key
+                    )
+                
+                if response.status_code == 200 or response.status_code == 201:
+                    parsed_data = parse_response(response)
+                    requesting_user_object = await sync_to_async(lambda: approval_request.requesting_user.user)()
+                    
+                    instance = ActionTrail(
+                        user_id=requesting_user_object, 
+                        action_id=parsed_data.get('id'), 
+                        action_type=Actions.get("PACKAGE")
+                    )
+                    await sync_to_async(instance.save)()
+                    approval_request.is_successful = True
+                    await sync_to_async(approval_request.save)()
+                    return JsonResponse(parsed_data, safe=False)
+                
+                approval_request.is_successful = False
+                await sync_to_async(approval_request.save)()
+                return stream_response(response)
+            else:
+                JsonResponse({"message": "Request type not recognized!!"}, safe=False)
         else:
             serialized_data = await sync_to_async(get_single_approval_request_serialized_data)(approval_request)
             return Response(serialized_data)
@@ -221,79 +249,6 @@ async def package_request(request):
         return stream_response(response)
 
     return JsonResponse({"message": "Package Request created!!"}, safe=False)
-
-@async_permission_required('auth.approval_package', raise_exception=True)
-@api_view(['POST'])
-async def submit_package_response(request):
-    auth_header = request.headers.get('Authorization')
-    token = auth_header.split(' ')[1]
-    decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
-    logged_in_user = await sync_to_async(User.objects.get)(id=decoded_token.get("user_id"))
-    logged_in_user_profile = await sync_to_async(get_logged_in_user_profile)(request)
-    approval_request = await sync_to_async(ApprovalRequest.objects.get)(uuid=request.POST.get('approval_request_id'))
-    
-    is_approved = await sync_to_async(lambda: approval_request.approved_by.filter(id=logged_in_user.id).exists())()
-    is_rejected = await sync_to_async(lambda: approval_request.rejected_by.filter(user=logged_in_user).exists())()
-    
-    if is_approved:
-        return Response({"message": "User has already approved this request."}, status=400)
-    
-    if is_rejected:
-        return Response({"message": "User has already rejected this request."}, status=400)
-
-    if request.POST.get('response') == Approve:
-        await sync_to_async(approval_request.approved_by.add)(logged_in_user)
-        await sync_to_async(approval_request.save)()
-
-        approver_group = await sync_to_async(Group.objects.get)(name='Approver')
-        approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
-        approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
-        approvers_count = await sync_to_async(lambda: UserProfile.objects.filter(
-            user__id__in=approvers_user_ids,
-            user__userprofile__api_key=approval_request.requesting_user.api_key
-        ).count())()
-
-        approved_users = await sync_to_async(approval_request.approved_by.all)()
-        approved_users_count = await sync_to_async(approved_users.count)()
-
-        if approvers_count == approved_users_count:
-            data = approval_request.request_json
-            response = await airtime.buy_package(
-                data.get('phone'), 
-                data.get('package'),
-                logged_in_user_profile.api_key
-                )
-            
-            if response.status_code == 200 or response.status_code == 201:
-                parsed_data = parse_response(response)
-                requesting_user_object = await sync_to_async(lambda: approval_request.requesting_user.user)()
-                
-                instance = ActionTrail(
-                    user_id=requesting_user_object, 
-                    action_id=parsed_data.get('id'), 
-                    action_type=Actions.get("PACKAGE")
-                )
-                await sync_to_async(instance.save)()
-                approval_request.is_successful = True
-                await sync_to_async(approval_request.save)()
-                return JsonResponse(parsed_data, safe=False)
-            
-            approval_request.is_successful = False
-            await sync_to_async(approval_request.save)()
-            return stream_response(response)
-        else:
-            serialized_data = await sync_to_async(get_single_approval_request_serialized_data)(approval_request)
-            return Response(serialized_data)
-    else:
-        rejected_request_instance = RejectedRequest(
-            user=logged_in_user, 
-            rejection_reason=request.POST.get('rejection_reason'),
-        )
-        await sync_to_async(rejected_request_instance.save)()
-        await sync_to_async(approval_request.rejected_by.add)(rejected_request_instance)
-        await sync_to_async(approval_request.save)()
-        serialized_data = await sync_to_async(get_single_approval_request_serialized_data)(approval_request)
-        return Response(serialized_data)
 
 def get_approval_request_serialized_data(db_results):
     serializer = ApprovalRequestSerializer(db_results, many=True)
