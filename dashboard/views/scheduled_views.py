@@ -18,7 +18,6 @@ from ..constants import Actions, Approve, Reject
 from django.db.models import Q
 from rest_framework.response import Response
 from ..serializers.serializers import ApprovalRequestSerializer
-import json
 
 @async_permission_required('auth.schedule_request', raise_exception=True)
 @api_view(['POST'])
@@ -28,7 +27,7 @@ async def schedule_request(request):
     data = request.data
 
     approval_request = ApprovalRequest(
-        request_json=json.dumps(data),
+        request_json=data,
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('SCHEDULED'), 
     )
@@ -111,7 +110,7 @@ async def submit_scheduled_response(request):
         approved_users_count = await sync_to_async(approved_users.count)()
 
         if approvers_count == approved_users_count:
-            data = json.loads(approval_request.request_json)
+            data = approval_request.request_json
             meta_data = {}
             response = await scheduled.create(
                 data.get('account_number'), 

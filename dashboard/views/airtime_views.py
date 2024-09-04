@@ -11,7 +11,6 @@ from django.http.response import JsonResponse
 from django.contrib.auth.models import User, Group
 from ..serializers.serializers import ApprovalRequestSerializer
 from django.db.models import Q
-import json
 import jwt
 
 @async_permission_required('auth.airtime_request', raise_exception=True)
@@ -22,7 +21,7 @@ async def airtime_request(request):
     data = request.data
 
     approval_request = ApprovalRequest(
-        request_json=json.dumps(data),
+        request_json=data,
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('AIRTIME'), 
     )
@@ -101,7 +100,7 @@ async def submit_airtime_response(request):
         approved_users_count = await sync_to_async(approved_users.count)()
 
         if approvers_count == approved_users_count:
-            data = json.loads(approval_request.request_json)
+            data = approval_request.request_json
             response = await airtime.buy_airtime(
                 data.get('phone'), 
                 data.get('amount'),
@@ -158,15 +157,15 @@ async def airtime_requests(request):
 
     if not is_approver:
         queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+            Q(request_type=Requests.get('AIRTIME')) | Q(request_type=Requests.get('PACKAGE')),
             requesting_user__id=logged_in_user_profile.id,
-            request_type=Requests.get('AIRTIME')
         ).order_by('-updated_at').all())()
         paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
         return JsonResponse(paginated_response)
     else:
         queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
-            requesting_user__api_key=logged_in_user_profile.api_key,
-            request_type=Requests.get('AIRTIME')
+            Q(request_type=Requests.get('AIRTIME')) | Q(request_type=Requests.get('PACKAGE')),
+            requesting_user__api_key=logged_in_user_profile.api_key
         ).all())()
         paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
         return JsonResponse(paginated_response) 
@@ -179,7 +178,7 @@ async def package_request(request):
     data = request.data
 
     approval_request = ApprovalRequest(
-        request_json=json.dumps(data),
+        request_json=data,
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('PACKAGE'), 
     )
@@ -258,7 +257,7 @@ async def submit_package_response(request):
         approved_users_count = await sync_to_async(approved_users.count)()
 
         if approvers_count == approved_users_count:
-            data = json.loads(approval_request.request_json)
+            data = approval_request.request_json
             response = await airtime.buy_package(
                 data.get('phone'), 
                 data.get('package'),
@@ -302,32 +301,7 @@ def get_approval_request_serialized_data(db_results):
 
 def get_single_approval_request_serialized_data(db_results):
     serializer = ApprovalRequestSerializer(db_results)
-    return serializer.data
-
-@async_permission_required('auth.package_requests', raise_exception=True)
-@api_view(['GET'])
-async def package_requests(request):
-    logged_in_user=await sync_to_async(get_logged_in_user)(request)
-    logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
-
-    approver_group = await sync_to_async(Group.objects.get)(name='Approver')
-    is_approver = await sync_to_async(lambda: logged_in_user.groups.filter(id=approver_group.id).exists())()
-
-    if not is_approver:
-        queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
-            requesting_user__id=logged_in_user_profile.id,
-            request_type=Requests.get('PACKAGE')
-        ).order_by('-updated_at').all())()
-        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
-        return JsonResponse(paginated_response)
-    else:
-        queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
-            requesting_user__api_key=logged_in_user_profile.api_key,
-            request_type=Requests.get('PACKAGE')
-        ).all())()
-        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
-        return JsonResponse(paginated_response)
-    
+    return serializer.data    
 
 @api_view(['GET'])
 async def proxy_list_recharges(request):
