@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from ..constants import Actions, Requests, Approve, Pending
 import json
 import jwt
-from django.db.models import Q, F
+from django.db.models import Q, F, Count
 from django.contrib.auth.models import User, Group
 from ..serializers.serializers import ApprovalRequestSerializer
 from django.db.models.functions import Cast
@@ -33,7 +33,9 @@ async def proxy_get_transaction_list_by_user(request):
 async def transaction_request(request):
     logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
+
     data = request.data
+    amount = data.get("amount")
 
     approval_request = ApprovalRequest(
         request_json=data,
@@ -48,6 +50,10 @@ async def transaction_request(request):
     approver_user_profiles = await sync_to_async(lambda: UserProfile.objects.filter(
         user__id__in=approvers_user_ids,
         user__userprofile__api_key=logged_in_user_profile.api_key
+    ).annotate(
+        approverrule_count=Count('approverrule')
+    ).filter(
+        Q(approverrule__approve_threshold__lt=amount) | Q(approverrule_count=0)
     ))()
     approver_objects = await sync_to_async(lambda: [approver_user_profile.user for approver_user_profile in approver_user_profiles])()
     approvers_count = await sync_to_async(approver_user_profiles.count)()
@@ -103,6 +109,9 @@ async def submit_transaction_response(request):
         return Response({"message": "User has already rejected this request."}, status=400)
     
     if request.POST.get('response') == Approve:
+        data = approval_request.request_json
+        amount = data.get("amount")
+
         await sync_to_async(approval_request.approved_by.add)(logged_in_user)
         await sync_to_async(approval_request.save)()
 
@@ -112,6 +121,10 @@ async def submit_transaction_response(request):
         approvers_count = await sync_to_async(lambda: UserProfile.objects.filter(
             user__id__in=approvers_user_ids,
             user__userprofile__api_key=approval_request.requesting_user.api_key
+        ).annotate(
+            approverrule_count=Count('approverrule')
+        ).filter(
+            Q(approverrule__approve_threshold__lt=amount) | Q(approverrule_count=0)
         ).count())()
 
         approved_users = await sync_to_async(approval_request.approved_by.all)()
