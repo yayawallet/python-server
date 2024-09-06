@@ -124,9 +124,11 @@ class ApproverRuleAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         approver_group = Group.objects.get(name='Approver')
-        self.fields['user'].queryset = UserProfile.objects.filter(
+        approvers_in_group = UserProfile.objects.filter(
             user__groups=approver_group
         )
+        approvers_already_assigned = ApproverRule.objects.values_list('user', flat=True)
+        self.fields['user'].queryset = approvers_in_group.exclude(id__in=approvers_already_assigned)
 
 class ApproverRuleAdmin(admin.ModelAdmin):
     form = ApproverRuleAdminForm

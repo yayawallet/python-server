@@ -121,7 +121,7 @@ async def submit_transfer_response(request):
                 data.get('ref_code'),
                 data.get('sender_note'),
                 data.get('phone'),
-                logged_in_user.api_key
+                logged_in_user_profile.api_key
                 )
             
             if response.status_code == 200 or response.status_code == 201:
