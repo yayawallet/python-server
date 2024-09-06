@@ -8,6 +8,11 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'first_name', 'last_name']
 
+class UserExtendedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'last_login', 'is_superuser', 'username', 'first_name', 'last_name', 'email', 'is_staff', 'is_active', 'date_joined']
+
 class ImportedDocumentsSerializer(serializers.ModelSerializer):
     class Meta:
         model = ImportedDocuments 
@@ -38,6 +43,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile 
         fields = ['phone', 'user']
+
+class UserProfileExtendedSerializer(serializers.ModelSerializer):
+    user = UserExtendedSerializer()
+    class Meta:
+        model = UserProfile 
+        fields = ['id', 'user', 'country', 'address', 'region', 'phone', 'date_of_birth', 'profile_image', 'id_image']
 
 class BillSerializer(serializers.ModelSerializer):
     class Meta:

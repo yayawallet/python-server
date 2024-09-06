@@ -63,12 +63,6 @@ def create_custom_permissions(apps, schema_editor):
     )
 
     Permission.objects.create(
-        codename='transfer_as_user',
-        name='Transfer As User',
-        content_type=content_type,
-    )
-
-    Permission.objects.create(
         codename='external_account_lookup',
         name='External Account Lookup',
         content_type=content_type,
@@ -237,6 +231,23 @@ def create_custom_permissions(apps, schema_editor):
     )
     
     Permission.objects.create(
+        codename='transfer_request',
+        name='Transfer Request',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='approval_transfer',
+        name='Approval Transfer',
+        content_type=content_type,
+    )
+
+    Permission.objects.create(
+        codename='transfer_requests',
+        name='Transfer Requests',
+        content_type=content_type,
+    )
+    Permission.objects.create(
         codename='airtime_request',
         name='Airtime Request',
         content_type=content_type,
@@ -257,18 +268,6 @@ def create_custom_permissions(apps, schema_editor):
     Permission.objects.create(
         codename='package_request',
         name='Package Request',
-        content_type=content_type,
-    )
-
-    Permission.objects.create(
-        codename='approval_package',
-        name='Approval Package',
-        content_type=content_type,
-    )
-
-    Permission.objects.create(
-        codename='package_requests',
-        name='Package Requests',
         content_type=content_type,
     )
 
