@@ -3,7 +3,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as AuthUserAdmin
 from django.contrib.auth.models import User
-from .models import UserProfile, ApiKey, ActionTrail, ApproverRule
+from .models import UserProfile, ApiKey, ActionTrail, ApproverRule, ApprovalRequest
 from django.contrib.auth.models import Group
 from django import forms
 from .forms.custom_user_change_form import CustomUserChangeForm
@@ -140,9 +140,33 @@ class ApproverRuleAdmin(admin.ModelAdmin):
         elif request.user.groups.filter(name='Admin').exists():
             return qs.filter(user__api_key=api_key).exclude(user__user__is_superuser=True)
         return qs.none()
+    
+class ApprovalRequestAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_view_permission(self, request, obj=None):
+        return True
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        user = request.user
+        api_key = user.userprofile.api_key
+        if user.is_superuser:
+            return qs
+        elif request.user.groups.filter(name='Admin').exists():
+            return qs.filter(requesting_user__api_key=api_key).exclude(requesting_user__user__is_superuser=True)
+        return qs.none()
 
 admin.site.unregister(User)
 admin.site.register(User, AccountsUserAdmin)
 admin.site.register(ApiKey)
 admin.site.register(ApproverRule, ApproverRuleAdmin)
 admin.site.register(ActionTrail, ActionTrailAdmin)
+admin.site.register(ApprovalRequest, ApprovalRequestAdmin)
