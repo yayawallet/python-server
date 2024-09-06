@@ -11,20 +11,26 @@ import pandas as pd
 from dashboard.tasks import import_scheduled_rows
 from ..constants import ImportTypes, Requests
 import jwt
+from django.db.models.functions import Cast
+from django.db.models.fields import IntegerField
+from django.db.models.fields.json import KeyTextTransform
 from django.contrib.auth.models import User, Group
-from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile, get_logged_in_user_profile_instance, get_paginated_response, add_approver_sync
-from ..models import ActionTrail, UserProfile
-from ..constants import Actions, Approve, Reject
+from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile, get_logged_in_user_profile_instance, get_paginated_response, add_approver_sync, get_approver_objects
+from ..models import ActionTrail, UserProfile, ApproverRule
+from ..constants import Actions, Approve, Reject, Pending
 from django.db.models import Q
 from rest_framework.response import Response
 from ..serializers.serializers import ApprovalRequestSerializer
+from django.core.exceptions import ObjectDoesNotExist
 
 @async_permission_required('auth.schedule_request', raise_exception=True)
 @api_view(['POST'])
 async def schedule_request(request):
     logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     logged_in_user_profile=await sync_to_async(get_logged_in_user_profile_instance)(request)
+
     data = request.data
+    amount = data.get("amount")
 
     approval_request = ApprovalRequest(
         request_json=data,
@@ -33,15 +39,8 @@ async def schedule_request(request):
     )
     await sync_to_async(approval_request.save)()
 
-    approver_group = await sync_to_async(Group.objects.get)(name='Approver')
-    approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
-    approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
-    approver_user_profiles = await sync_to_async(lambda: UserProfile.objects.filter(
-        user__id__in=approvers_user_ids,
-        user__userprofile__api_key=logged_in_user_profile.api_key
-    ))()
-    approver_objects = await sync_to_async(lambda: [approver_user_profile.user for approver_user_profile in approver_user_profiles])()
-    approvers_count = await sync_to_async(approver_user_profiles.count)()
+    approver_objects = await sync_to_async(get_approver_objects)(logged_in_user_profile, amount, approval_request)
+    approvers_count = len(approver_objects)
 
     await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
@@ -95,17 +94,14 @@ async def submit_scheduled_response(request):
         return Response({"message": "User has already rejected this request."}, status=400)
 
     if request.POST.get('response') == Approve:
+        data = approval_request.request_json
+        amount = data.get("amount")
+
         await sync_to_async(approval_request.approved_by.add)(logged_in_user)
         await sync_to_async(approval_request.save)()
 
-        approver_group = await sync_to_async(Group.objects.get)(name='Approver')
-        approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
-        approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
-        approvers_count = await sync_to_async(lambda: UserProfile.objects.filter(
-            user__id__in=approvers_user_ids,
-            user__userprofile__api_key=approval_request.requesting_user.api_key
-        ).count())()
-
+        approver_objects = await sync_to_async(get_approver_objects)(approval_request.requesting_user, amount, approval_request)
+        approvers_count = len(approver_objects)
         approved_users = await sync_to_async(approval_request.approved_by.all)()
         approved_users_count = await sync_to_async(approved_users.count)()
 
@@ -178,10 +174,29 @@ async def scheduled_requests(request):
         paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
         return JsonResponse(paginated_response)
     else:
-        queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+        get_pending = request.GET.get('status') == Pending
+
+        approve_threshold = 0
+        try:
+            approver_rule = await sync_to_async(ApproverRule.objects.get)(user=logged_in_user_profile)
+            approve_threshold = approver_rule.approve_threshold
+        except ObjectDoesNotExist:
+            pass
+        
+        base_queryset = await sync_to_async(lambda: ApprovalRequest.objects.annotate(
+            amount_value=Cast(KeyTextTransform('amount', 'request_json'), IntegerField())
+        ).filter(
             requesting_user__api_key=logged_in_user_profile.api_key,
-            request_type=Requests.get('SCHEDULED')
+            request_type=Requests.get('SCHEDULED'),
+            amount_value__gte=approve_threshold,
+            created_at__gte=logged_in_user.date_joined
         ).order_by('-updated_at').all())()
+
+        if get_pending:
+            queryset = await sync_to_async(lambda: [req for req in base_queryset if not req.rejected_by.exists() and logged_in_user not in req.approved_by.all()])()
+        else:
+            queryset = base_queryset
+
         paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
         return JsonResponse(paginated_response)
         

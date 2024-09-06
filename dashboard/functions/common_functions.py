@@ -1,8 +1,10 @@
 import jwt
 import json
 from ..models import User, UserProfile
+from django.db.models import Q, Count
+from django.contrib.auth.models import Group
 from django.core.paginator import Paginator
-from ..serializers.serializers import ApprovalRequestSerializer
+from ..serializers.serializers import ApprovalRequestSerializer, UserProfileExtendedSerializer
 
 def get_logged_in_user(request):
   auth_header = request.headers.get('Authorization')
@@ -23,17 +25,8 @@ def get_logged_in_user_profile_object(request):
   token = auth_header.split(' ')[1]
   decoded_token = jwt.decode(jwt=token, algorithms=["HS256"], options={'verify_signature':False})
   logged_in_user_profile = UserProfile.objects.get(user_id=decoded_token.get("user_id"))
-  user_profile_dict = {
-        'user_id': logged_in_user_profile.user.id,
-        'country': logged_in_user_profile.country,
-        'address': logged_in_user_profile.address,
-        'region': logged_in_user_profile.region,
-        'phone': logged_in_user_profile.phone,
-        'date_of_birth': logged_in_user_profile.date_of_birth.isoformat() if logged_in_user_profile.date_of_birth else None,
-        'profile_image': logged_in_user_profile.profile_image.url if logged_in_user_profile.profile_image else None,
-        'id_image': logged_in_user_profile.id_image.url if logged_in_user_profile.id_image else None,
-    }
-  return user_profile_dict
+  user_profile_dict = UserProfileExtendedSerializer(logged_in_user_profile)
+  return user_profile_dict.data
 
 def get_logged_in_user_profile_instance(request):
   auth_header = request.headers.get('Authorization')
@@ -83,3 +76,18 @@ def get_paginated_response(request, queryset):
 def add_approver_sync(instance, approver_objects): 
   instance.approvers.add(*approver_objects)
   instance.save()
+
+def get_approver_objects(user, amount, approval_request): 
+  approver_group = Group.objects.get(name='Approver')
+  approvers = User.objects.filter(groups=approver_group)
+  approvers_user_ids = [user.id for user in approvers]
+  approver_user_profiles = UserProfile.objects.filter(
+      user__id__in=approvers_user_ids,
+      user__userprofile__api_key=user.api_key,
+      user__date_joined__lte=approval_request.created_at
+  ).annotate(
+      approverrule_count=Count('approverrule')
+  ).filter(
+      Q(approverrule__approve_threshold__lt=amount) | Q(approverrule_count=0)
+  )
+  return [approver_user_profile.user for approver_user_profile in approver_user_profiles]

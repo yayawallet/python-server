@@ -14,12 +14,16 @@ from python_server.celery import app
 from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile, get_logged_in_user_profile_instance, get_paginated_response, add_approver_sync
 import jwt
 from django.contrib.auth.models import User, Group
-from ..models import ActionTrail, UserProfile
-from ..constants import Actions
+from ..models import ActionTrail, UserProfile, ApproverRule
+from ..constants import Actions, Pending
 from django.db.models import Q
 import json
 from rest_framework.response import Response
 from ..serializers.serializers import ApprovalRequestSerializer
+from django.db.models.functions import Cast
+from django.db.models.fields import IntegerField
+from django.db.models.fields.json import KeyTextTransform
+from django.core.exceptions import ObjectDoesNotExist
 
 @api_view(['GET'])
 async def proxy_list_all_contracts(request):
@@ -348,10 +352,28 @@ async def payment_requests(request):
         paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
         return JsonResponse(paginated_response)
     else:
-        queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
+        get_pending = request.GET.get('status') == Pending
+
+        approve_threshold = 0
+        try:
+            approver_rule = await sync_to_async(ApproverRule.objects.get)(user=logged_in_user_profile)
+            approve_threshold = approver_rule.approve_threshold
+        except ObjectDoesNotExist:
+            pass
+
+        base_queryset = await sync_to_async(lambda: ApprovalRequest.objects.annotate(
+            amount_value=Cast(KeyTextTransform('amount', 'request_json'), IntegerField())
+        ).filter(
             requesting_user__api_key=logged_in_user_profile.api_key,
-            request_type=Requests.get('REQUEST_PAYMENT')
+            request_type=Requests.get('REQUEST_PAYMENT'),
+            amount_value__gte=approve_threshold,
+            created_at__gte=logged_in_user.date_joined
         ).order_by('-updated_at').all())()
+
+        if get_pending:
+            queryset = await sync_to_async(lambda: [req for req in base_queryset if not req.rejected_by.exists() and logged_in_user not in req.approved_by.all()])()
+        else:
+            queryset = base_queryset
         paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
         return JsonResponse(paginated_response)
 
