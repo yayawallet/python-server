@@ -100,7 +100,9 @@ async def submit_scheduled_response(request):
         await sync_to_async(approval_request.approved_by.add)(logged_in_user)
         await sync_to_async(approval_request.save)()
 
-        approver_objects = await sync_to_async(get_approver_objects)(approval_request.requesting_user, amount, approval_request)
+        requester = await sync_to_async(lambda: approval_request.requesting_user)()
+
+        approver_objects = await sync_to_async(get_approver_objects)(requester, amount, approval_request)
         approvers_count = len(approver_objects)
         approved_users = await sync_to_async(approval_request.approved_by.all)()
         approved_users_count = await sync_to_async(approved_users.count)()
