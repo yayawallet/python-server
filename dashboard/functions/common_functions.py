@@ -4,6 +4,7 @@ from ..models import User, UserProfile
 from django.db.models import Q, Count
 from django.contrib.auth.models import Group
 from django.core.paginator import Paginator
+from django.utils import timezone
 from ..serializers.serializers import ApprovalRequestSerializer, UserProfileExtendedSerializer
 
 def get_logged_in_user(request):
@@ -81,10 +82,14 @@ def get_approver_objects(user, amount, approval_request):
   approver_group = Group.objects.get(name='Approver')
   approvers = User.objects.filter(groups=approver_group)
   approvers_user_ids = [user.id for user in approvers]
+  if approval_request.created_at :
+    request_time = approval_request.created_at 
+  else:
+    request_time = timezone.now()
   approver_user_profiles = UserProfile.objects.filter(
       user__id__in=approvers_user_ids,
       user__userprofile__api_key=user.api_key,
-      user__date_joined__lte=approval_request.created_at
+      user__date_joined__lte=request_time
   ).annotate(
       approverrule_count=Count('approverrule')
   ).filter(

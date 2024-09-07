@@ -14,7 +14,7 @@ class ApiKey(models.Model):
     api_key = models.CharField()
 
     def __str__(self):
-        return self.api_key
+        return self.name
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
