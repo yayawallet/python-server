@@ -42,12 +42,9 @@ async def transaction_request(request):
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('TRANSACTION'), 
     )
-    await sync_to_async(approval_request.save)()
 
     approver_objects = await sync_to_async(get_approver_objects)(logged_in_user_profile, amount, approval_request)
     approvers_count = len(approver_objects)
-
-    await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
     if approvers_count == 0:
         meta_data = {}
@@ -68,13 +65,15 @@ async def transaction_request(request):
                 action_type=Actions.get("TRANSACTION")
             )
             await sync_to_async(instance.save)()
-            approval_request.is_successful = True
-            await sync_to_async(approval_request.save)()
             return JsonResponse(parsed_data, safe=False)
         
         approval_request.is_successful = False
         await sync_to_async(approval_request.save)() 
         return stream_response(response)
+
+    await sync_to_async(approval_request.save)()
+
+    await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
     return JsonResponse({"message": "Transaction Request created!!"}, safe=False)
 

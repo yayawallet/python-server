@@ -122,16 +122,46 @@ class ApproverRuleAdminForm(forms.ModelForm):
         fields = '__all__'
 
     def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
-        approver_group = Group.objects.get(name='Approver')
-        approvers_in_group = UserProfile.objects.filter(
-            user__groups=approver_group
-        )
-        approvers_already_assigned = ApproverRule.objects.values_list('user', flat=True)
-        self.fields['user'].queryset = approvers_in_group.exclude(id__in=approvers_already_assigned)
+        if 'user' in self.fields:
+            user = self.request.user
+            api_key = user.userprofile.api_key
+            is_superuser = user.is_superuser
+            approver_group = Group.objects.get(name='Approver')
+            approvers_in_group = UserProfile.objects.filter(
+                user__groups=approver_group
+            )
+            approvers_already_assigned = ApproverRule.objects.values_list('user', flat=True)
+            if(is_superuser):
+                self.fields['user'].queryset = approvers_in_group.exclude(id__in=approvers_already_assigned)
+            else:
+                self.fields['user'].queryset = approvers_in_group.filter(api_key=api_key).exclude(id__in=approvers_already_assigned)
 
 class ApproverRuleAdmin(admin.ModelAdmin):
     form = ApproverRuleAdminForm
+
+    def get_form(self, request, obj=None, **kwargs):
+        form_class = super().get_form(request, obj, **kwargs)
+        
+        class RequestForm(form_class):
+            def __init__(self, *args, **kwargs):
+                kwargs['request'] = request
+                super().__init__(*args, **kwargs)
+
+        return RequestForm
+
+    def has_add_permission(self, request):
+        return True
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return True
+
+    def has_view_permission(self, request, obj=None):
+        return True
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -165,6 +195,15 @@ class ApprovalRequestAdmin(admin.ModelAdmin):
         elif request.user.groups.filter(name='Admin').exists():
             return qs.filter(requesting_user__api_key=api_key).exclude(requesting_user__user__is_superuser=True)
         return qs.none()
+    
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return [f.name for f in self.model._meta.fields]
+        return super().get_readonly_fields(request, obj)
+
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        self.readonly_fields = self.get_readonly_fields(request)
+        return super().change_view(request, object_id, form_url, extra_context)
 
 admin.site.unregister(User)
 admin.site.register(User, AccountsUserAdmin)

@@ -31,12 +31,9 @@ async def airtime_request(request):
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('AIRTIME'), 
     )
-    await sync_to_async(approval_request.save)()
 
     approver_objects = await sync_to_async(get_approver_objects)(logged_in_user_profile, amount, approval_request)
     approvers_count = len(approver_objects)
-
-    await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
     if approvers_count == 0:
         response = await airtime.buy_airtime(
@@ -61,6 +58,10 @@ async def airtime_request(request):
         approval_request.is_successful = False
         await sync_to_async(approval_request.save)()  
         return stream_response(response)
+        
+    await sync_to_async(approval_request.save)()
+
+    await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
     return JsonResponse({"message": "Airtime Request created!!"}, safe=False)
 
@@ -227,12 +228,9 @@ async def package_request(request):
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('PACKAGE'), 
     )
-    await sync_to_async(approval_request.save)()
 
     approver_objects = await sync_to_async(get_approver_objects)(logged_in_user_profile, amount, approval_request)
     approvers_count = len(approver_objects)
-
-    await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
     if approvers_count == 0:
         response = await airtime.buy_package(
@@ -257,6 +255,10 @@ async def package_request(request):
         approval_request.is_successful = False
         await sync_to_async(approval_request.save)() 
         return stream_response(response)
+
+    await sync_to_async(approval_request.save)()
+
+    await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
     return JsonResponse({"message": "Package Request created!!"}, safe=False)
 

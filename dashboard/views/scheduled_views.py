@@ -37,12 +37,9 @@ async def schedule_request(request):
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('SCHEDULED'), 
     )
-    await sync_to_async(approval_request.save)()
 
     approver_objects = await sync_to_async(get_approver_objects)(logged_in_user_profile, amount, approval_request)
     approvers_count = len(approver_objects)
-
-    await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
     if approvers_count == 0:
         response = await scheduled.create(
@@ -71,6 +68,10 @@ async def schedule_request(request):
         approval_request.is_successful = False
         await sync_to_async(approval_request.save)() 
         return stream_response(response)
+    
+    await sync_to_async(approval_request.save)()
+
+    await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
     return JsonResponse({"message": "Scheduled Payments Request created!!"}, safe=False)
 
