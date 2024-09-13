@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.dispatch import receiver
 from django.db.models.signals import post_save
 from django.db.models import Q
+from django.db.models.signals import m2m_changed
 
 class ApiKey(models.Model):
     uuid = models.UUIDField( 
@@ -34,6 +35,22 @@ class UserProfile(models.Model):
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.create(user=instance)
+
+@receiver(m2m_changed, sender=User.groups.through)
+def group_change_handler(sender, instance, **kwargs):
+    if kwargs['action'] in ['post_add', 'post_remove', 'post_clear']:
+        instance.save()
+        print(instance)
+        usear = User.objects.get(username='ermiyas')
+        print(usear.has_perm('dashboard.can_access_admin'))
+        print(usear.groups.filter(permissions__codename='can_access_admin').exists())
+        if instance.groups.filter(permissions__codename='can_access_admin').exists() or instance.has_perm('dashboard.can_access_admin'):
+            instance.is_staff = True
+            print("third check")
+        else:
+            instance.is_staff = False
+        instance.save()
+        print("final check")
 
 class ImportedDocuments(models.Model):
     uuid = models.UUIDField( 

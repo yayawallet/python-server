@@ -1,0 +1,15 @@
+{% extends "admin/change_form.html" %}
+{% block after_field_sets %}
+    {% if form.password_display %}
+        <fieldset class="module aligned">
+            <div class="form-row field-password_display">
+                <div>
+                    <label for="id_password_display">Password:</label>
+                    <div class="readonly">
+                        {{ form.password_display }}
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    {% endif %}
+{% endblock %}
