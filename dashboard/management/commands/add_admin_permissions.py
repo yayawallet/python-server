@@ -9,6 +9,7 @@ class Command(BaseCommand):
 
         group, _ = Group.objects.get_or_create(name="Admin")
 
+        can_access_admin = Permission.objects.get(codename="can_access_admin")
         view_group = Permission.objects.get(codename="view_group")
         view_permission = Permission.objects.get(codename="view_permission")
         add_user = Permission.objects.get(codename="add_user")
@@ -25,6 +26,7 @@ class Command(BaseCommand):
         delete_approverrule = Permission.objects.get(codename="delete_approverrule")
         view_approverrule = Permission.objects.get(codename="view_approverrule")
         
+        group.permissions.add(can_access_admin)
         group.permissions.add(view_group)
         group.permissions.add(view_permission)
         group.permissions.add(add_user)

@@ -2,11 +2,11 @@
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as AuthUserAdmin
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from .models import UserProfile, ApiKey, ActionTrail, ApproverRule, ApprovalRequest
-from django.contrib.auth.models import Group
 from django import forms
 from .forms.custom_user_change_form import CustomUserChangeForm
+from django.contrib.admin import AdminSite
 
 class UserProfileStaffInline(admin.StackedInline):
     model = UserProfile
@@ -19,32 +19,31 @@ class UserProfileInline(admin.StackedInline):
     
 class AccountsUserAdmin(AuthUserAdmin):
     form = CustomUserChangeForm
+    change_form_template = 'admin/auth/user/change_form.html'
 
     superadmin_fieldsets = (
-        (None, {'fields': ('username', 'password')}),
-        ('Personal info', {'fields': ('first_name', 'last_name', 'email')}),
+        (None, {'fields': ('username', 'password_display')}),
+        ('Personal info', {'fields': ('first_name', 'last_name', 'email',
+                'country', 'address', 'region', 'phone', 
+                'date_of_birth', 'profile_image', 'id_image', 'api_key')}),
         ('Permissions', {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
+            'fields': ('is_active', 'is_superuser', 'groups', 'user_permissions'),
         }),
-        ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
 
     user_fieldsets = (
-        (None, {'fields': ('username', 'password')}),
-        ('Personal info', {'fields': ('first_name', 'last_name', 'email')}),
+        (None, {'fields': ('username', 'password_display')}),
+        ('Personal info', {'fields': ('first_name', 'last_name', 'email',
+                'country', 'address', 'region', 'phone', 
+                'date_of_birth', 'profile_image', 'id_image')}),
         ('Permissions', {
-            'fields': ('is_active', 'is_staff', 'groups'),
+            'fields': ('is_active', 'groups'),
         }),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
 
     readonly_fields = ('password',)
 
-    def password(self, obj):
-        return "********* <a href='../password/'>Change password</a>"
-
-    password.allow_tags = True
-    password.short_description = 'Password'
 
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff')
 
@@ -72,13 +71,7 @@ class AccountsUserAdmin(AuthUserAdmin):
         self.inlines = []
         return super(AccountsUserAdmin, self).add_view(*args, **kwargs)
     
-    def change_view(self, request, object_id, form_url='', extra_context=None):
-        user = request.user
-        if user.is_superuser:
-            self.inlines = [UserProfileStaffInline]
-        else:
-            self.inlines = [UserProfileInline]
-        
+    def change_view(self, request, object_id, form_url='', extra_context=None):        
         return super(AccountsUserAdmin, self).change_view(request, object_id, form_url, extra_context)
     
     def get_queryset(self, request):
@@ -92,6 +85,13 @@ class AccountsUserAdmin(AuthUserAdmin):
             return qs.filter(userprofile__api_key=api_key).exclude(is_superuser=True)
         else:
             return qs.none()
+    
+    def get_list_filter(self, request):
+        user = request.user
+        if user.is_superuser:
+            return ('is_staff', 'is_superuser', 'is_active', 'groups')
+        else:
+            return ('is_staff', 'is_active', 'groups')
         
 class ActionTrailAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
@@ -204,10 +204,23 @@ class ApprovalRequestAdmin(admin.ModelAdmin):
     def change_view(self, request, object_id, form_url='', extra_context=None):
         self.readonly_fields = self.get_readonly_fields(request)
         return super().change_view(request, object_id, form_url, extra_context)
+    
+# class CustomAdminSite(AdminSite):
+#     def has_permission(self, request):
+#         user = request.user
+#         if not user.is_active:
+#             return False
+#         if user.has_perm('dashboard.can_access_admin') or user.is_staff or user.is_superuser:
+#             return True
+#         return False
+    
+# custom_admin_site = CustomAdminSite(name='custom_admin')
 
 admin.site.unregister(User)
+
 admin.site.register(User, AccountsUserAdmin)
 admin.site.register(ApiKey)
 admin.site.register(ApproverRule, ApproverRuleAdmin)
 admin.site.register(ActionTrail, ActionTrailAdmin)
 admin.site.register(ApprovalRequest, ApprovalRequestAdmin)
+# admin.site = custom_admin_site
