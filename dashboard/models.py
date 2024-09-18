@@ -40,17 +40,11 @@ def create_user_profile(sender, instance, created, **kwargs):
 def group_change_handler(sender, instance, **kwargs):
     if kwargs['action'] in ['post_add', 'post_remove', 'post_clear']:
         instance.save()
-        print(instance)
-        usear = User.objects.get(username='ermiyas')
-        print(usear.has_perm('dashboard.can_access_admin'))
-        print(usear.groups.filter(permissions__codename='can_access_admin').exists())
         if instance.groups.filter(permissions__codename='can_access_admin').exists() or instance.has_perm('dashboard.can_access_admin'):
             instance.is_staff = True
-            print("third check")
         else:
             instance.is_staff = False
         instance.save()
-        print("final check")
 
 class ImportedDocuments(models.Model):
     uuid = models.UUIDField( 
