@@ -31,11 +31,8 @@ class CustomUserChangeForm(forms.ModelForm):
         fields = ['username', 'first_name', 'last_name', 'email', 'is_active', 'is_superuser', 'groups', 'user_permissions', 'password_display']
     
     def __init__(self, *args, **kwargs):
-        request = kwargs.pop('request', None)
-        super().__init__(*args, **kwargs)
-
-        print(request)
-
+        super(CustomUserChangeForm, self).__init__(*args, **kwargs)
+        
         if self.instance.pk:
             user_profile = UserProfile.objects.get(user=self.instance)
             self.fields['country'].initial = user_profile.country
@@ -45,11 +42,7 @@ class CustomUserChangeForm(forms.ModelForm):
             self.fields['date_of_birth'].initial = user_profile.date_of_birth
             self.fields['profile_image'].initial = user_profile.profile_image
             self.fields['id_image'].initial = user_profile.id_image
-            if (request and not request.user.is_superuser):
-                self.fields.pop('api_key', None)
-            elif not request or request:
-                self.fields['api_key'].initial = user_profile.api_key
-
+            self.fields['api_key'].initial = user_profile.api_key
             if self.instance.password:
                 hasher = identify_hasher(self.instance.password)
                 self.fields['password_display'].initial = (
@@ -60,23 +53,20 @@ class CustomUserChangeForm(forms.ModelForm):
                     "Raw passwords are not stored, so there is no way to see this user’s password, but you can change the password using this form."
                 )
 
-    def save(self, commit=True, request=None):
+    def save(self, commit=True):
         user = super(CustomUserChangeForm, self).save(commit=False)
         if commit:
             user.save()
-        
-        if request:
-            user_profile, created = UserProfile.objects.get_or_create(user=user)
-            user_profile.country = self.cleaned_data['country']
-            user_profile.address = self.cleaned_data['address']
-            user_profile.region = self.cleaned_data['region']
-            user_profile.phone = self.cleaned_data['phone']
-            user_profile.date_of_birth = self.cleaned_data['date_of_birth']
-            user_profile.profile_image = self.cleaned_data['profile_image']
-            user_profile.id_image = self.cleaned_data['id_image']
-            if request.user.is_superuser:
-                user_profile.api_key = self.cleaned_data['api_key']
 
-            user_profile.save()
+        user_profile, created = UserProfile.objects.get_or_create(user=user)
+        user_profile.country = self.cleaned_data['country']
+        user_profile.address = self.cleaned_data['address']
+        user_profile.region = self.cleaned_data['region']
+        user_profile.phone = self.cleaned_data['phone']
+        user_profile.date_of_birth = self.cleaned_data['date_of_birth']
+        user_profile.profile_image = self.cleaned_data['profile_image']
+        user_profile.id_image = self.cleaned_data['id_image']
+        user_profile.api_key = self.cleaned_data['api_key']
+        user_profile.save()
 
         return user
