@@ -11,7 +11,7 @@ from ..permisssions.async_permission import async_permission_required
 import pandas as pd
 from dashboard.tasks import import_contract_rows, import_recurring_payment_request_rows
 from python_server.celery import app
-from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile, get_logged_in_user_profile_instance, get_paginated_response, add_approver_sync
+from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile, get_logged_in_user_profile_instance, get_paginated_response, get_paginated_bulk_response, add_approver_sync
 import jwt
 from django.contrib.auth.models import User, Group
 from ..models import ActionTrail, UserProfile, ApproverRule
@@ -183,14 +183,14 @@ async def contract_requests(request):
             requesting_user__id=logged_in_user_profile.id,
             request_type=Requests.get('CONTRACT')
         ).order_by('-updated_at').all())()
-        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        paginated_response = await sync_to_async(get_paginated_bulk_response)(request, queryset)
         return JsonResponse(paginated_response)
     else:
         queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
             requesting_user__api_key=logged_in_user_profile.api_key,
             request_type=Requests.get('CONTRACT')
         ).order_by('-updated_at').all())()
-        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        paginated_response = await sync_to_async(get_paginated_bulk_response)(request, queryset)
         return JsonResponse(paginated_response)
 
 @async_permission_required('auth.payment_request', raise_exception=True)
@@ -349,7 +349,7 @@ async def payment_requests(request):
             requesting_user__id=logged_in_user_profile.id,
             request_type=Requests.get('REQUEST_PAYMENT')
         ).order_by('-updated_at').all())()
-        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        paginated_response = await sync_to_async(get_paginated_bulk_response)(request, queryset)
         return JsonResponse(paginated_response)
     else:
         get_pending = request.GET.get('status') == Pending
@@ -374,7 +374,7 @@ async def payment_requests(request):
             queryset = await sync_to_async(lambda: [req for req in base_queryset if not req.rejected_by.exists() and logged_in_user not in req.approved_by.all()])()
         else:
             queryset = base_queryset
-        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        paginated_response = await sync_to_async(get_paginated_bulk_response)(request, queryset)
         return JsonResponse(paginated_response)
 
 @async_permission_required('auth.my_payment_requests', raise_exception=True)
@@ -484,7 +484,7 @@ async def bulk_contract_import_request(request):
         )
         await sync_to_async(instance.save)()
         saved_id = instance.uuid
-        import_contract_rows.delay(data, saved_id, logged_in_user_profile.api_key)
+        import_contract_rows.delay(data, saved_id, logged_in_user_profile.api_key.api_key)
 
         return JsonResponse({"message": "Contracts Import in Progress!!"}, safe=False)
 
@@ -681,7 +681,7 @@ async def bulk_import_payment_request(request):
         )
         await sync_to_async(instance.save)()
         saved_id = instance.uuid
-        import_recurring_payment_request_rows.delay(data, saved_id, logged_in_user_profile.api_key)
+        import_recurring_payment_request_rows.delay(data, saved_id, logged_in_user_profile.api_key.api_key)
 
         return JsonResponse({"message": "Payment Requests Import in Progress!!"}, safe=False)
 
