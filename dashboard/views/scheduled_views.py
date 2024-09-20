@@ -15,7 +15,7 @@ from django.db.models.functions import Cast
 from django.db.models.fields import IntegerField
 from django.db.models.fields.json import KeyTextTransform
 from django.contrib.auth.models import User, Group
-from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile, get_logged_in_user_profile_instance, get_paginated_response, add_approver_sync, get_approver_objects
+from ..functions.common_functions import get_logged_in_user, parse_response, get_logged_in_user_profile, get_logged_in_user_profile_instance, get_paginated_response, get_paginated_bulk_response, add_approver_sync, get_approver_objects
 from ..models import ActionTrail, UserProfile, ApproverRule
 from ..constants import Actions, Approve, Reject, Pending
 from django.db.models import Q
@@ -285,7 +285,7 @@ async def bulk_schedule_import_request(request):
         )
         await sync_to_async(instance.save)()
         saved_id = instance.uuid
-        import_scheduled_rows.delay(data, saved_id, logged_in_user_profile.api_key)
+        import_scheduled_rows.delay(data, saved_id, logged_in_user_profile.api_key.api_key)
 
         return JsonResponse({"message": "Scheduled Payments Import in Progress!!"}, safe=False)
 
@@ -406,12 +406,12 @@ async def scheduled_bulk_requests(request):
             requesting_user__id=logged_in_user_profile.id,
             request_type=Requests.get('SCHEDULED_BULK_IMPORT')
         ).order_by('-updated_at').all())()
-        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        paginated_response = await sync_to_async(get_paginated_bulk_response)(request, queryset)
         return JsonResponse(paginated_response)
     else:
         queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
             requesting_user__api_key=logged_in_user_profile.api_key,
             request_type=Requests.get('SCHEDULED_BULK_IMPORT')
         ).order_by('-updated_at').all())()
-        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        paginated_response = await sync_to_async(get_paginated_bulk_response)(request, queryset)
         return JsonResponse(paginated_response)

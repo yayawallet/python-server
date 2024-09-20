@@ -6,6 +6,11 @@ from django.contrib.auth.models import Group
 from django.core.paginator import Paginator
 from django.utils import timezone
 from ..serializers.serializers import ApprovalRequestSerializer, UserProfileExtendedSerializer
+from django.core.files.storage import default_storage
+import requests
+import pandas as pd
+from io import BytesIO
+import os
 
 def get_logged_in_user(request):
   auth_header = request.headers.get('Authorization')
@@ -68,6 +73,61 @@ def get_paginated_response(request, queryset):
 
   return {
       'data': data,
+      'page': page_obj.number,
+      'lastPage': paginator.num_pages,
+      'total': paginator.count,
+      'perPage': per_page
+  }
+
+def get_file_content(file_url):
+    file_path = file_url.lstrip('/')
+
+    with default_storage.open(file_path, 'r') as file:
+        content = file.read()
+
+    return content
+
+def download_file(url):
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.content
+
+def read_file(file_content, url):
+    with BytesIO(file_content) as f:
+        if url.endswith(('xlsx')):
+            df = pd.read_excel(f, engine='openpyxl')
+        elif url.endswith(('xls')):
+            df = pd.read_excel(f, engine='xlrd')
+        elif url.endswith(('csv')):
+            df = pd.read_csv(f)
+        else:
+            raise ValueError("Unsupported file type")
+    return df
+
+def convert_to_json(df):
+    return df.to_json(orient='records')
+
+def process_file(url):
+    if not url.startswith('http://') and not url.startswith('https://'):
+        url = os.environ.get('YAYA_BASE_URL') + url
+    file_content = download_file(url)
+    df = read_file(file_content, url)
+    json_data = convert_to_json(df)
+    return json_data
+
+def get_paginated_bulk_response(request, queryset):
+  per_page = request.GET.get('perPage', 15)
+  paginator = Paginator(queryset, per_page)
+    
+  page_number = request.GET.get('page', 1)
+  page_obj = paginator.get_page(page_number)
+
+  serializer = ApprovalRequestSerializer(page_obj.object_list, many=True)
+  datas = serializer.data
+  updated_datas = [{**data, 'file': json.loads(process_file(data['file']))} for data in datas]
+
+  return {
+      'data': updated_datas,
       'page': page_obj.number,
       'lastPage': paginator.num_pages,
       'total': paginator.count,

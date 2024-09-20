@@ -39,11 +39,9 @@ class AccountsUserAdmin(AuthUserAdmin):
         ('Permissions', {
             'fields': ('is_active', 'groups'),
         }),
-        ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
 
     readonly_fields = ('password',)
-
 
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff')
 
@@ -57,7 +55,20 @@ class AccountsUserAdmin(AuthUserAdmin):
             fieldsets = self.user_fieldsets
         return fieldsets
     
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        
+        class RequestForm(form):
+            def __init__(self2, *args, **kwargs):
+                kwargs['request'] = request
+                super(RequestForm, self2).__init__(*args, **kwargs)
+        
+        return RequestForm
+
+    
     def save_model(self, request, obj, form, change):
+        if change:
+            form.save(commit=True, request=request)
         if not change and not obj.is_superuser and not request.user.is_superuser:
             user = super().save_model(request, obj, form, change)
             admin_profile = request.user.userprofile
@@ -67,11 +78,11 @@ class AccountsUserAdmin(AuthUserAdmin):
         else:
             super().save_model(request, obj, form, change)
 
-    def add_view(self, *args, **kwargs):
+    def add_view(self, form_url='', extra_context=None):
         self.inlines = []
-        return super(AccountsUserAdmin, self).add_view(*args, **kwargs)
+        return super(AccountsUserAdmin, self).add_view(form_url, extra_context)
     
-    def change_view(self, request, object_id, form_url='', extra_context=None):        
+    def change_view(self, request, object_id, form_url='', extra_context=None):
         return super(AccountsUserAdmin, self).change_view(request, object_id, form_url, extra_context)
     
     def get_queryset(self, request):
