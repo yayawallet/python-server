@@ -55,7 +55,6 @@ class CustomUserChangeForm(forms.ModelForm):
                     f"iterations: {hasher.iterations}\n"
                     f"salt: {self.instance.password[:20] + '****************'}\n"
                     f"hash: {self.instance.password[-20:] + '************'}\n\n"
-                    "Raw passwords are not stored, so there is no way to see this user’s password, but you can change the password using this form."
                 )
 
     def save(self, commit=True, request=None):
