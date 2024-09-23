@@ -19,11 +19,9 @@ class UserProfileInline(admin.StackedInline):
     
 class AccountsUserAdmin(AuthUserAdmin):
     form = CustomUserChangeForm
-    change_form_template = 'admin/auth/user/change_form.html'
 
     superadmin_fieldsets = (
-        (None, {'fields': ('username', 'password_display')}),
-        ('Personal info', {'fields': ('first_name', 'last_name', 'email',
+        ('Personal info', {'fields': ('username', 'first_name', 'last_name', 'email',
                 'country', 'address', 'region', 'phone', 
                 'date_of_birth', 'profile_image', 'id_image', 'api_key')}),
         ('Permissions', {
@@ -32,8 +30,7 @@ class AccountsUserAdmin(AuthUserAdmin):
     )
 
     user_fieldsets = (
-        (None, {'fields': ('username', 'password_display')}),
-        ('Personal info', {'fields': ('first_name', 'last_name', 'email',
+        ('Personal info', {'fields': ('username', 'first_name', 'last_name', 'email',
                 'country', 'address', 'region', 'phone', 
                 'date_of_birth', 'profile_image', 'id_image')}),
         ('Permissions', {

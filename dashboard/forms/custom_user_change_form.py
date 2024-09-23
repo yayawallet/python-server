@@ -1,7 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
 from ..models import UserProfile, ApiKey
-from django.contrib.auth.hashers import identify_hasher
 
 class CustomUserChangeForm(forms.ModelForm):
     country = forms.CharField(required=False)
@@ -20,15 +19,10 @@ class CustomUserChangeForm(forms.ModelForm):
     last_name = forms.CharField(required=True)
     email = forms.CharField(required=True)
 
-    password_display = forms.CharField(
-        label='Password', 
-        required=False, 
-        widget=forms.Textarea(attrs={'readonly': 'readonly'}))
-
 
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'email', 'is_active', 'is_superuser', 'groups', 'user_permissions', 'password_display']
+        fields = ['username', 'first_name', 'last_name', 'email', 'is_active', 'is_superuser', 'groups', 'user_permissions']
     
     def __init__(self, *args, **kwargs):
         request = kwargs.pop('request', None)
@@ -47,15 +41,6 @@ class CustomUserChangeForm(forms.ModelForm):
                 self.fields.pop('api_key', None)
             elif not request or request:
                 self.fields['api_key'].initial = user_profile.api_key
-
-            if self.instance.password:
-                hasher = identify_hasher(self.instance.password)
-                self.fields['password_display'].initial = (
-                    f"algorithm: {hasher.algorithm}\n"
-                    f"iterations: {hasher.iterations}\n"
-                    f"salt: {self.instance.password[:20] + '****************'}\n"
-                    f"hash: {self.instance.password[-20:] + '************'}\n\n"
-                )
 
     def save(self, commit=True, request=None):
         user = super(CustomUserChangeForm, self).save(commit=False)
