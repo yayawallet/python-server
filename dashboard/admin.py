@@ -192,6 +192,8 @@ class ApprovalRequestAdmin(admin.ModelAdmin):
         return False
 
     def has_delete_permission(self, request, obj=None):
+        if request.user.is_superuser:
+            return True
         return False
 
     def has_view_permission(self, request, obj=None):

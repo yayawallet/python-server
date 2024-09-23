@@ -65,12 +65,8 @@ async def transfer_request(request):
                 action_type=Actions.get("TRANSFER")
             )
             await sync_to_async(instance.save)()
-            approval_request.is_successful = True
-            await sync_to_async(approval_request.save)()
             return JsonResponse(parsed_data, safe=False)
         
-        approval_request.is_successful = False
-        await sync_to_async(approval_request.save)() 
         return stream_response(response)
     
     await sync_to_async(approval_request.save)()
