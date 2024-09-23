@@ -43,7 +43,6 @@ async def contract_request(request):
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('CONTRACT'), 
     )
-    await sync_to_async(approval_request.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -54,8 +53,6 @@ async def contract_request(request):
     ))()
     approver_objects = await sync_to_async(lambda: [approver_user_profile.user for approver_user_profile in approver_user_profiles])()
     approvers_count = await sync_to_async(approver_user_profiles.count)()
-
-    await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
     if approvers_count == 0:
         response = await recurring_contract.create_contract(
@@ -75,13 +72,13 @@ async def contract_request(request):
                 action_type=Actions.get("CONTRACT_ACTION")
             )
             await sync_to_async(instance.save)()
-            approval_request.is_successful = True
-            await sync_to_async(approval_request.save)()
             return JsonResponse(parsed_data, safe=False)
         
-        approval_request.is_successful = False
-        await sync_to_async(approval_request.save)() 
         return stream_response(response)
+
+    await sync_to_async(approval_request.save)()
+
+    await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
     return JsonResponse({"message": "Contract Request created!!"}, safe=False)
 
@@ -205,7 +202,6 @@ async def payment_request(request):
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('REQUEST_PAYMENT'), 
     )
-    await sync_to_async(approval_request.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -216,8 +212,6 @@ async def payment_request(request):
     ))()
     approver_objects = await sync_to_async(lambda: [approver_user_profile.user for approver_user_profile in approver_user_profiles])()
     approvers_count = await sync_to_async(approver_user_profiles.count)()
-
-    await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
     if approvers_count == 0:
         response = await recurring_contract.request_payment(
@@ -239,13 +233,13 @@ async def payment_request(request):
                 action_type=Actions.get("REQUEST_PAYMENT_ACTION")
             )
             await sync_to_async(instance.save)()
-            approval_request.is_successful = True
-            await sync_to_async(approval_request.save)()
             return JsonResponse(parsed_data, safe=False)
         
-        approval_request.is_successful = False
-        await sync_to_async(approval_request.save)() 
         return stream_response(response)
+    
+    await sync_to_async(approval_request.save)()
+    
+    await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
     return JsonResponse({"message": "Payment Request for Approval created!!"}, safe=False)
 
@@ -452,13 +446,12 @@ async def bulk_contract_import_request(request):
     except Exception as e:
         return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
 
-    instance = ApprovalRequest(
+    approval_request = ApprovalRequest(
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('CONTRACT_BULK_IMPORT'), 
         file=uploaded_file, 
         remark=request.POST.get('remark'), 
     )
-    await sync_to_async(instance.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -469,8 +462,6 @@ async def bulk_contract_import_request(request):
     ))()
     approver_objects = await sync_to_async(lambda: [approver_user_profile.user for approver_user_profile in approver_user_profiles])()
     approvers_count = await sync_to_async(approver_user_profiles.count)()
-
-    await sync_to_async(add_approver_sync)(instance, approver_objects)
 
     if approvers_count == 0:
         instance = ImportedDocuments(
@@ -487,6 +478,10 @@ async def bulk_contract_import_request(request):
         import_contract_rows.delay(data, saved_id, logged_in_user_profile.api_key.api_key)
 
         return JsonResponse({"message": "Contracts Import in Progress!!"}, safe=False)
+
+    await sync_to_async(approval_request.save)()
+
+    await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
     return JsonResponse({"message": "Contracts Import Request created!!"}, safe=False)
 
@@ -649,13 +644,12 @@ async def bulk_import_payment_request(request):
     except Exception as e:
         return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
 
-    instance = ApprovalRequest(
+    approval_request = ApprovalRequest(
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('REQUEST_PAYMENT_BULK_IMPORT'), 
         file=uploaded_file, 
         remark=request.POST.get('remark'), 
     )
-    await sync_to_async(instance.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -666,8 +660,6 @@ async def bulk_import_payment_request(request):
     ))()
     approver_objects = await sync_to_async(lambda: [approver_user_profile.user for approver_user_profile in approver_user_profiles])()
     approvers_count = await sync_to_async(approver_user_profiles.count)()
-
-    await sync_to_async(add_approver_sync)(instance, approver_objects)
 
     if approvers_count == 0:
         instance = ImportedDocuments(
@@ -685,6 +677,10 @@ async def bulk_import_payment_request(request):
 
         return JsonResponse({"message": "Payment Requests Import in Progress!!"}, safe=False)
 
+    await sync_to_async(approval_request.save)()
+
+    await sync_to_async(add_approver_sync)(approval_request, approver_objects)
+    
     return JsonResponse({"message": "Payment Requests Import Request created!!"}, safe=False)
 
 @async_permission_required('auth.approval_bulk_payment_request_import', raise_exception=True)

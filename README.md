@@ -6,6 +6,7 @@ You have to set the following environment variables for the project to run succe
 ```
 YAYA_API_URL=https://sandbox.yayawallet.com/api/en
 YAYA_API_PATH=/api/en
+YAYA_BASE_URL={YOUR_SERVER_BASE_URL}
 POSTGRES_DB={YOUR_DATABASE_NAME}
 POSTGRES_USER={YOUR_DATABASE_USER}
 POSTGRES_PASSWORD={YOUR_DATABASE_PASSWORD}

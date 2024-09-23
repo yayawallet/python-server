@@ -61,12 +61,8 @@ async def schedule_request(request):
                 action_type=Actions.get("SCHEDULED_ACTION")
             )
             await sync_to_async(instance.save)()
-            approval_request.is_successful = True
-            await sync_to_async(approval_request.save)()
             return JsonResponse(parsed_data, safe=False)
         
-        approval_request.is_successful = False
-        await sync_to_async(approval_request.save)() 
         return stream_response(response)
     
     await sync_to_async(approval_request.save)()
@@ -253,13 +249,12 @@ async def bulk_schedule_import_request(request):
     except Exception as e:
         return HttpResponseBadRequest(f"Error converting file to JSON: {e}")
 
-    instance = ApprovalRequest(
+    approval_request = ApprovalRequest(
         requesting_user=logged_in_user_profile,
         request_type=Requests.get('SCHEDULED_BULK_IMPORT'), 
         file=uploaded_file, 
         remark=request.POST.get('remark'), 
     )
-    await sync_to_async(instance.save)()
 
     approver_group = await sync_to_async(Group.objects.get)(name='Approver')
     approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
@@ -270,8 +265,6 @@ async def bulk_schedule_import_request(request):
     ))()
     approver_objects = await sync_to_async(lambda: [approver_user_profile.user for approver_user_profile in approver_user_profiles])()
     approvers_count = await sync_to_async(approver_user_profiles.count)()
-
-    await sync_to_async(add_approver_sync)(instance, approver_objects)
 
     if approvers_count == 0:
         instance = ImportedDocuments(
@@ -288,6 +281,9 @@ async def bulk_schedule_import_request(request):
         import_scheduled_rows.delay(data, saved_id, logged_in_user_profile.api_key.api_key)
 
         return JsonResponse({"message": "Scheduled Payments Import in Progress!!"}, safe=False)
+    
+    await sync_to_async(approval_request.save)()
+    await sync_to_async(add_approver_sync)(approval_request, approver_objects)
 
     return JsonResponse({"message": "Scheduled Payments Import Request created!!"}, safe=False)
     

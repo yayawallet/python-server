@@ -19,11 +19,9 @@ class UserProfileInline(admin.StackedInline):
     
 class AccountsUserAdmin(AuthUserAdmin):
     form = CustomUserChangeForm
-    change_form_template = 'admin/auth/user/change_form.html'
 
     superadmin_fieldsets = (
-        (None, {'fields': ('username', 'password_display')}),
-        ('Personal info', {'fields': ('first_name', 'last_name', 'email',
+        ('Personal info', {'fields': ('username', 'first_name', 'last_name', 'email',
                 'country', 'address', 'region', 'phone', 
                 'date_of_birth', 'profile_image', 'id_image', 'api_key')}),
         ('Permissions', {
@@ -32,14 +30,12 @@ class AccountsUserAdmin(AuthUserAdmin):
     )
 
     user_fieldsets = (
-        (None, {'fields': ('username', 'password_display')}),
-        ('Personal info', {'fields': ('first_name', 'last_name', 'email',
+        ('Personal info', {'fields': ('username', 'first_name', 'last_name', 'email',
                 'country', 'address', 'region', 'phone', 
                 'date_of_birth', 'profile_image', 'id_image')}),
         ('Permissions', {
             'fields': ('is_active', 'groups'),
         }),
-        ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
 
     readonly_fields = ('password',)
@@ -57,7 +53,22 @@ class AccountsUserAdmin(AuthUserAdmin):
             fieldsets = self.user_fieldsets
         return fieldsets
     
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        
+        class RequestForm(form):
+            def __init__(self2, *args, **kwargs):
+                kwargs['request'] = request
+                if obj is None:
+                    self2.request = kwargs.pop('request', None)
+                super(RequestForm, self2).__init__(*args, **kwargs)
+        
+        return RequestForm
+
+    
     def save_model(self, request, obj, form, change):
+        if change:
+            form.save(commit=True, request=request)
         if not change and not obj.is_superuser and not request.user.is_superuser:
             user = super().save_model(request, obj, form, change)
             admin_profile = request.user.userprofile
@@ -67,11 +78,11 @@ class AccountsUserAdmin(AuthUserAdmin):
         else:
             super().save_model(request, obj, form, change)
 
-    def add_view(self, *args, **kwargs):
+    def add_view(self, request=None, form_url='', extra_context=None):
         self.inlines = []
-        return super(AccountsUserAdmin, self).add_view(*args, **kwargs)
+        return super(AccountsUserAdmin, self).add_view(request, form_url, extra_context)
     
-    def change_view(self, request, object_id, form_url='', extra_context=None):        
+    def change_view(self, request, object_id, form_url='', extra_context=None):
         return super(AccountsUserAdmin, self).change_view(request, object_id, form_url, extra_context)
     
     def get_queryset(self, request):
@@ -111,9 +122,9 @@ class ActionTrailAdmin(admin.ModelAdmin):
         user = request.user
         api_key = user.userprofile.api_key
         if user.is_superuser:
-            return qs
+            return qs.order_by('-created_at')
         elif request.user.groups.filter(name='Admin').exists():
-            return qs.filter(user_id__userprofile__api_key=api_key).exclude(user_id__is_superuser=True)
+            return qs.filter(user_id__userprofile__api_key=api_key).exclude(user_id__is_superuser=True).order_by('-created_at')
         return qs.none()
     
 class ApproverRuleAdminForm(forms.ModelForm):
@@ -181,6 +192,8 @@ class ApprovalRequestAdmin(admin.ModelAdmin):
         return False
 
     def has_delete_permission(self, request, obj=None):
+        if request.user.is_superuser:
+            return True
         return False
 
     def has_view_permission(self, request, obj=None):
@@ -191,9 +204,9 @@ class ApprovalRequestAdmin(admin.ModelAdmin):
         user = request.user
         api_key = user.userprofile.api_key
         if user.is_superuser:
-            return qs
+            return qs.order_by('-created_at')
         elif request.user.groups.filter(name='Admin').exists():
-            return qs.filter(requesting_user__api_key=api_key).exclude(requesting_user__user__is_superuser=True)
+            return qs.filter(requesting_user__api_key=api_key).exclude(requesting_user__user__is_superuser=True).order_by('-created_at')
         return qs.none()
     
     def get_readonly_fields(self, request, obj=None):
