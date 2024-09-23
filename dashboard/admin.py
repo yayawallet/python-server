@@ -122,9 +122,9 @@ class ActionTrailAdmin(admin.ModelAdmin):
         user = request.user
         api_key = user.userprofile.api_key
         if user.is_superuser:
-            return qs
+            return qs.order_by('-created_at')
         elif request.user.groups.filter(name='Admin').exists():
-            return qs.filter(user_id__userprofile__api_key=api_key).exclude(user_id__is_superuser=True)
+            return qs.filter(user_id__userprofile__api_key=api_key).exclude(user_id__is_superuser=True).order_by('-created_at')
         return qs.none()
     
 class ApproverRuleAdminForm(forms.ModelForm):
@@ -204,9 +204,9 @@ class ApprovalRequestAdmin(admin.ModelAdmin):
         user = request.user
         api_key = user.userprofile.api_key
         if user.is_superuser:
-            return qs
+            return qs.order_by('-created_at')
         elif request.user.groups.filter(name='Admin').exists():
-            return qs.filter(requesting_user__api_key=api_key).exclude(requesting_user__user__is_superuser=True)
+            return qs.filter(requesting_user__api_key=api_key).exclude(requesting_user__user__is_superuser=True).order_by('-created_at')
         return qs.none()
     
     def get_readonly_fields(self, request, obj=None):
