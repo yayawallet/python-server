@@ -138,7 +138,7 @@ def add_approver_sync(instance, approver_objects):
   instance.approvers.add(*approver_objects)
   instance.save()
 
-def get_approver_objects(user, amount, approval_request): 
+def get_approver_objects(user, approval_request, amount = None): 
   approver_group = Group.objects.get(name='Approver')
   approvers = User.objects.filter(groups=approver_group)
   approvers_user_ids = [user.id for user in approvers]
@@ -153,6 +153,6 @@ def get_approver_objects(user, amount, approval_request):
   ).annotate(
       approverrule_count=Count('approverrule')
   ).filter(
-      Q(approverrule__approve_threshold__lt=amount) | Q(approverrule_count=0)
+      Q(approverrule__approve_threshold__lt=amount) | Q(approverrule_count=0) if amount is not None else Q(approverrule_count__gte=0)
   )
   return [approver_user_profile.user for approver_user_profile in approver_user_profiles]
