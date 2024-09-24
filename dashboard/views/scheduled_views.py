@@ -38,7 +38,7 @@ async def schedule_request(request):
         request_type=Requests.get('SCHEDULED'), 
     )
 
-    approver_objects = await sync_to_async(get_approver_objects)(logged_in_user_profile, amount, approval_request)
+    approver_objects = await sync_to_async(get_approver_objects)(logged_in_user_profile, approval_request, amount)
     approvers_count = len(approver_objects)
 
     if approvers_count == 0:
@@ -99,7 +99,7 @@ async def submit_scheduled_response(request):
 
         requester = await sync_to_async(lambda: approval_request.requesting_user)()
 
-        approver_objects = await sync_to_async(get_approver_objects)(requester, amount, approval_request)
+        approver_objects = await sync_to_async(get_approver_objects)(requester, approval_request, amount)
         approvers_count = len(approver_objects)
         approved_users = await sync_to_async(approval_request.approved_by.all)()
         approved_users_count = await sync_to_async(approved_users.count)()
@@ -256,15 +256,8 @@ async def bulk_schedule_import_request(request):
         remark=request.POST.get('remark'), 
     )
 
-    approver_group = await sync_to_async(Group.objects.get)(name='Approver')
-    approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
-    approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
-    approver_user_profiles = await sync_to_async(lambda: UserProfile.objects.filter(
-        user__id__in=approvers_user_ids,
-        user__userprofile__api_key=logged_in_user_profile.api_key
-    ))()
-    approver_objects = await sync_to_async(lambda: [approver_user_profile.user for approver_user_profile in approver_user_profiles])()
-    approvers_count = await sync_to_async(approver_user_profiles.count)()
+    approver_objects = await sync_to_async(get_approver_objects)(logged_in_user_profile, approval_request)
+    approvers_count = len(approver_objects)
 
     if approvers_count == 0:
         instance = ImportedDocuments(
@@ -340,14 +333,10 @@ async def submit_bulk_schedule_response(request):
         await sync_to_async(approval_request.approved_by.add)(logged_in_user)
         await sync_to_async(approval_request.save)()
 
-        approver_group = await sync_to_async(Group.objects.get)(name='Approver')
-        approvers = await sync_to_async(User.objects.filter)(groups=approver_group)
-        approvers_user_ids = await sync_to_async(lambda: [user.id for user in approvers])()
-        approvers_count = await sync_to_async(lambda: UserProfile.objects.filter(
-            user__id__in=approvers_user_ids,
-            user__userprofile__api_key=approval_request.requesting_user.api_key
-        ).count())()
+        requester = await sync_to_async(lambda: approval_request.requesting_user)()
 
+        approver_objects = await sync_to_async(get_approver_objects)(requester, approval_request)
+        approvers_count = len(approver_objects)
         approved_users = await sync_to_async(approval_request.approved_by.all)()
         approved_users_count = await sync_to_async(approved_users.count)()
 
