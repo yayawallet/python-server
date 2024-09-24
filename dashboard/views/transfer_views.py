@@ -41,7 +41,7 @@ async def transfer_request(request):
         request_type=Requests.get('TRANSFER'), 
     )
 
-    approver_objects = await sync_to_async(get_approver_objects)(logged_in_user_profile, amount, approval_request)
+    approver_objects = await sync_to_async(get_approver_objects)(logged_in_user_profile, approval_request, amount)
     approvers_count = len(approver_objects)
 
     if approvers_count == 0:
