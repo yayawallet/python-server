@@ -398,7 +398,7 @@ async def scheduled_bulk_requests(request):
         
         base_queryset = await sync_to_async(lambda: ApprovalRequest.objects.filter(
             requesting_user__api_key=logged_in_user_profile.api_key,
-            request_type=Requests.get('REQUEST_PAYMENT'),
+            request_type=Requests.get('SCHEDULED_BULK_IMPORT'),
             created_at__gte=logged_in_user.date_joined
         ).order_by('-updated_at').all())()
 
