@@ -103,7 +103,7 @@ async def submit_transfer_response(request):
 
         requester = await sync_to_async(lambda: approval_request.requesting_user)()
 
-        approver_objects = await sync_to_async(get_approver_objects)(requester, amount, approval_request)
+        approver_objects = await sync_to_async(get_approver_objects)(requester, approval_request, amount)
         approvers_count = len(approver_objects)
         approved_users = await sync_to_async(approval_request.approved_by.all)()
         approved_users_count = await sync_to_async(approved_users.count)()
