@@ -407,5 +407,5 @@ async def scheduled_bulk_requests(request):
         else:
             queryset = base_queryset
 
-        paginated_response = await sync_to_async(get_paginated_response)(request, queryset)
+        paginated_response = await sync_to_async(get_paginated_bulk_response)(request, queryset)
         return JsonResponse(paginated_response)
