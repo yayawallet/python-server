@@ -1,6 +1,8 @@
 from django import forms
 from django.contrib.auth.models import User
 from ..models import UserProfile, ApiKey
+from django.urls import reverse
+from django.utils.html import format_html
 
 class CustomUserChangeForm(forms.ModelForm):
     country = forms.CharField(required=False)
@@ -19,16 +21,24 @@ class CustomUserChangeForm(forms.ModelForm):
     last_name = forms.CharField(required=True)
     email = forms.CharField(required=True)
 
+    password_display = forms.CharField(
+        label='Password',
+        widget=forms.TextInput(attrs={'readonly': 'readonly'}),
+        required=False
+    )
+
 
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'email', 'is_active', 'is_superuser', 'groups', 'user_permissions']
+        fields = ['username', 'first_name', 'last_name', 'email', 'is_active', 'is_superuser', 'groups', 'user_permissions', 'password_display']
     
     def __init__(self, *args, **kwargs):
         request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
 
         if self.instance.pk:
+            user_id = self.instance.pk
+            password_change_url = reverse('admin:auth_user_password_change', args=[user_id])
             user_profile = UserProfile.objects.get(user=self.instance)
             self.fields['country'].initial = user_profile.country
             self.fields['address'].initial = user_profile.address
@@ -41,6 +51,15 @@ class CustomUserChangeForm(forms.ModelForm):
                 self.fields.pop('api_key', None)
             elif not request or request:
                 self.fields['api_key'].initial = user_profile.api_key
+
+            if self.instance.password:
+                self.fields['password_display'].initial = (
+                    "Raw passwords are not stored, so there is no way to see this user’s password. "
+                )
+                self.fields['password_display'].help_text = format_html(
+                    "But you can change the password using <a href='{}'>this form</a>.",
+                    password_change_url
+                )
 
     def save(self, commit=True, request=None):
         user = super(CustomUserChangeForm, self).save(commit=False)
