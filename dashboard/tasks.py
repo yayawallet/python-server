@@ -1,7 +1,7 @@
 from __future__ import absolute_import, unicode_literals
 
 import celery
-from datetime import datetime
+from datetime import datetime, timezone
 from asgiref.sync import sync_to_async
 from .models import Scheduled, Contract, FailedImports, RecurringPaymentRequest, ImportedDocuments, Bill, Payout, BillSlice
 from yayawallet_python_sdk.api import scheduled, recurring_contract, bill, payout
@@ -16,17 +16,17 @@ from .functions.common_functions import parse_response, get_logged_in_user_profi
 
 def process_date(start_at):
     if isinstance(start_at, datetime):
-        return start_at
+        return start_at.replace(tzinfo=timezone.utc)
     elif isinstance(start_at, str):
         try:
-            return datetime.strptime(start_at, "%Y-%m-%d %H:%M:%S")
+            return datetime.strptime(start_at, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
         except ValueError:
             try:
-                return datetime.strptime(start_at, "%Y-%m-%d")
+                return datetime.strptime(start_at, "%Y-%m-%d").replace(tzinfo=timezone.utc)
             except ValueError:
-                return datetime(1970, 1, 1)
+                return datetime(1970, 1, 1, tzinfo=timezone.utc)
     else:
-        return datetime(1970, 1, 1)
+        return datetime(1970, 1, 1, tzinfo=timezone.utc)
     
 def process_meta_data(meta_data):
     empty_obj = {}
