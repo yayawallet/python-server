@@ -22,6 +22,7 @@ from django.db.models import Q
 from rest_framework.response import Response
 from ..serializers.serializers import ApprovalRequestSerializer
 from django.core.exceptions import ObjectDoesNotExist
+from typing import Dict
 
 @async_permission_required('auth.schedule_request', raise_exception=True)
 @api_view(['POST'])
@@ -203,10 +204,10 @@ async def scheduled_requests(request):
 @api_view(['GET'])
 async def proxy_schedule_list(request):
     logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
-    page = request.GET.get('p')
-    if not page:
-        page = "1"
-    params = "?p=" + page
+    page = request.GET.get('p', "1")
+
+    params: Dict[str, str] = {"p": page}
+
     response = await scheduled.get_list(params, logged_in_user.api_key)
     return stream_response(response)
 

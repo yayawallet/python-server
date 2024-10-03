@@ -16,6 +16,7 @@ from ..functions.common_functions import get_logged_in_user, parse_response, get
 from ..models import ActionTrail, BillSlice
 from ..constants import Actions
 from django.contrib.postgres.aggregates import ArrayAgg
+from typing import Dict
 
 @async_permission_required('auth.create_bill', raise_exception=True)
 @api_view(['POST'])
@@ -106,10 +107,10 @@ async def proxy_create_bulk_bill(request):
 @api_view(['GET'])
 async def proxy_bulk_bill_status(request):
     logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
-    page = request.GET.get('p')
-    if not page:
-        page = "1"
-    params = "?p=" + page
+    page = request.GET.get('p', "1")
+
+    params: Dict[str, str] = {"p": page}
+
     response = await bill.bulk_bill_status(params, logged_in_user.api_key)
     # parsed_content = parse_response(response)
     # result = await sync_to_async(
@@ -171,10 +172,17 @@ async def proxy_update_bill(request):
 async def proxy_bill_list(request):
     logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
     data = request.data
-    page = request.GET.get('p')
-    if not page:
-        page = "1"
-    params = "?p=" + page
+    page = request.GET.get('p', "1")
+    start = request.GET.get('start')
+    end = request.GET.get('end')
+
+    params: Dict[str, str] = {"p": page}
+    
+    if start:
+        params["start"] = start
+    if end:
+        params["end"] = end
+
     response = await bill.bulk_bill_list(data.get('client_yaya_account'), params, logged_in_user.api_key)
     return stream_response(response)
 

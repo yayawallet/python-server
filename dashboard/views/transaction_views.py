@@ -17,14 +17,22 @@ from django.db.models.functions import Cast
 from django.db.models.fields import IntegerField
 from django.db.models.fields.json import KeyTextTransform
 from django.core.exceptions import ObjectDoesNotExist
+from typing import Dict
 
 @api_view(['GET'])
 async def proxy_get_transaction_list_by_user(request):
     logged_in_user=await sync_to_async(get_logged_in_user_profile)(request)
-    page = request.GET.get('p')
-    if not page:
-        page = "1"
-    params = "?p=" + page
+    page = request.GET.get('p', "1")
+    start = request.GET.get('start')
+    end = request.GET.get('end')
+
+    params: Dict[str, str] = {"p": page}
+    
+    if start:
+        params["start"] = start
+    if end:
+        params["end"] = end
+
     response = await transaction.get_transaction_list_by_user(params, logged_in_user.api_key)
     return stream_response(response)
 
