@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from ..models import UserProfile, ApiKey
 from django.urls import reverse
 from django.utils.html import format_html
@@ -60,6 +60,18 @@ class CustomUserChangeForm(forms.ModelForm):
                     "But you can change the password using <a href='{}'>this form</a>.",
                     password_change_url
                 )
+
+    def clean_groups(self):
+        groups = self.cleaned_data.get('groups')
+
+        if groups.count() > 2:
+            raise forms.ValidationError("You can select a maximum of 2 roles.")
+
+        admin_role = Group.objects.get(name='Admin')
+        if groups.count() == 2 and admin_role not in groups:
+            raise forms.ValidationError("If two groups selected, One of the selected roles must be 'Admin'.")
+
+        return groups
 
     def save(self, commit=True, request=None):
         user = super(CustomUserChangeForm, self).save(commit=False)
