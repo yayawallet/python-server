@@ -49,7 +49,7 @@ jobs:
           SSHPASS: ${{ secrets.SSH_PASSWORD }}
         run: |
           sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
-          cd /path/to/your/project &&
+          cd ~/dashboard/yayawallet-dashboard &&
           docker-compose pull &&
           docker-compose up -d --no-deps worker backend
           '
