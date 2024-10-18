@@ -106,28 +106,28 @@ class AccountsUserAdmin(AuthUserAdmin):
         else:
             return ('is_staff', 'is_active', 'groups')
         
-class ActionTrailAdmin(admin.ModelAdmin):
-    def has_add_permission(self, request):
-        return False
+# class ActionTrailAdmin(admin.ModelAdmin):
+#     def has_add_permission(self, request):
+#         return False
 
-    def has_change_permission(self, request, obj=None):
-        return False
+#     def has_change_permission(self, request, obj=None):
+#         return False
 
-    def has_delete_permission(self, request, obj=None):
-        return False
+#     def has_delete_permission(self, request, obj=None):
+#         return False
 
-    def has_view_permission(self, request, obj=None):
-        return True
+#     def has_view_permission(self, request, obj=None):
+#         return True
 
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        user = request.user
-        api_key = user.userprofile.api_key
-        if user.is_superuser:
-            return qs.order_by('-created_at')
-        elif request.user.groups.filter(name='Admin').exists():
-            return qs.filter(user_id__userprofile__api_key=api_key).exclude(user_id__is_superuser=True).order_by('-created_at')
-        return qs.none()
+#     def get_queryset(self, request):
+#         qs = super().get_queryset(request)
+#         user = request.user
+#         api_key = user.userprofile.api_key
+#         if user.is_superuser:
+#             return qs.order_by('-created_at')
+#         elif request.user.groups.filter(name='Admin').exists():
+#             return qs.filter(user_id__userprofile__api_key=api_key).exclude(user_id__is_superuser=True).order_by('-created_at')
+#         return qs.none()
     
 class ApproverRuleAdminForm(forms.ModelForm):
     class Meta:
@@ -236,6 +236,6 @@ admin.site.unregister(User)
 admin.site.register(User, AccountsUserAdmin)
 admin.site.register(ApiKey)
 admin.site.register(ApproverRule, ApproverRuleAdmin)
-admin.site.register(ActionTrail, ActionTrailAdmin)
+# admin.site.register(ActionTrail, ActionTrailAdmin)
 admin.site.register(ApprovalRequest, ApprovalRequestAdmin)
 # admin.site = custom_admin_site
