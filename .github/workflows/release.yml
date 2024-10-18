@@ -37,3 +37,19 @@ jobs:
           tags: yayawallet/background-service:latest
           file: worker.Dockerfile
           platforms: linux/amd64,linux/arm64
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install sshpass
+        run: sudo apt-get install -y sshpass
+
+      - name: Run commands on ECS server
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} '
+          cd /path/to/your/project &&
+          docker-compose pull &&
+          docker-compose up -d --no-deps worker backend
+          '
