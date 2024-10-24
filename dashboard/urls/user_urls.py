@@ -8,4 +8,5 @@ urlpatterns = [
     path('user/register', user_views.proxy_create_customer_user, name='create-customer'),
     path('user/register-business', user_views.proxy_create_business_user, name='create-business'),
     path('user/balance', user_views.proxy_get_balance, name='get-balance'),
+    path('user/update', user_views.proxy_update_user, name='update-user'),
 ]
